@@ -1,0 +1,80 @@
+" @(#)dlli 8.1 2/5/93 Copyright (c) 1991,1992 Varian Assoc.,Inc. All Rights Reserved "
+"***********************************************"
+" dlli - display line list with peak integration"
+"***********************************************"
+  
+" usage: dlli(<integration_range>)          "
+"    where the argument describes the integration range around each "
+"    signal (the total integration range is f +/- integration_range "
+"    default range: 10 Hz "
+"    attention: removes integral reset points! "
+
+$file=curexp+'/lli.out'
+peak:$ht
+if $ht<0 then $ht=0-$ht endif
+ai vsadj($ht)
+if $#<0.5 then $range=10 else $range=$1 endif
+nll:$numpeaks
+dc  "do drift correction"
+cz  "remove integral reset points"
+if $numpeaks<1 then
+  write('line3','%s: no lines found',$0)
+  return(0)
+endif
+write('reset',$file)
+write('file',$file,'SPECTRAL LINES FOR TH=  %1.1f',th)
+if (rfl<>0.0)or(rfp<>0.0) then
+ write('file',$file,'  rfl= %8.1f,  rfp= %8.1f',rfl,rfp)
+endif
+$axis='(Hz) ' $div=1 "default"
+if axis='p' then
+  $axis='(PPM)' $div=sfrq
+  exists('reffrq','parameter'):$e
+  if $e then
+    if reffrq>0 then $div=reffrq endif
+  endif
+endif
+if axis='k' then $axis='(KHz)' $div=1000 endif
+if axis='h' then $axis='(Hz) ' $div=1 endif
+if axis='p' then
+  write('file',$file,'INDEX  FREQ.(Hz)        PPM      HEIGHT    INTEGRAL')
+else
+  write('file',$file,'INDEX  FREQUENCY %s   HEIGHT    INTEGRAL',$axis)
+endif
+$prevht=1 $prevfrq=1e8
+$ht=llamp[1]*vs $frq=llfrq[1]-rfl+rfp
+$i=1 "initialize counter"
+repeat
+ if $i<$numpeaks then
+   $nextht=llamp[$i+1]*vs $nextfrq=llfrq[$i+1]-rfl+rfp
+ else
+   $nextht=1 $nextfrq=-1e8
+ endif
+ if ($prevfrq-$frq)<(2*$range) then
+   $llim=$frq+($prevfrq-$frq)*$ht/($ht+$prevht)
+ else
+   $llim=$frq+$range
+ endif
+ if ($frq-$nextfrq)<(2*$range) then 
+   $rlim=$frq-($frq-$nextfrq)*$ht/($ht+$nextht)
+ else
+   $rlim=$frq-$range
+ endif
+ integ($rlim,$llim):$int
+ if axis='p' then
+  write('file',$file,'%3d%13.1f%11.2f%12.1f%12.4f',$i,$frq,$frq/$div,$ht,$int)
+ else if axis='h' then
+  write('file',$file,'%3d%15.1f%13.1f%12.4f',$i,$frq/$div,$ht,$int)
+ else  "axis='k'"
+  write('file',$file,'%3d%15.3f%13.1f%12.4f',$i,$frq/$div,$ht,$int)
+ endif endif
+ $i=$i+1 "increment counter"
+ $prevht=$ht $prevfrq=$frq
+ $ht=$nextht $frq=$nextfrq
+until $i>$numpeaks
+if ($0 <> 'nlli') then
+   cat($file)
+else
+   write('line3','%s: %d lines have been found',$0,$numpeaks)
+endif
+return($numpeaks)

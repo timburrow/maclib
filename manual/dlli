@@ -1,0 +1,35 @@
+*****************************************************************************
+  dlli	-	display linelisting with peak integration	    (macro)
+  nlli  -	create line listing with peak integration	    (macro)
+*****************************************************************************
+
+  Syntax:	dlli<(range)><:r1>
+		nlli<(range)><:r1>
+
+  Description:	"dlli" produces a line listing which also includes an integral
+		for each individual line found, in contrast to the "dll" com-
+		mand which only lists peak heights (apart from the frequency
+		information).
+		"dlli" evaluates the integral around each line: normally 10 Hz
+		are included on each side of a line (this range can be altered
+		with an optional argument). When two lines are closer to each
+		other than twice the range, the split point calculated: if the
+		two lines are different in size, the split point is set closer
+		to the smaller line. The command was written for the integra-
+		tion of line spectra like C13 - for complex multiplet spectra
+		(like H1) the result will not be adequate (use "region" in-
+		stead).
+		"dlli" creates a file "lli.out" in the current experiment
+		Note that "dlli" removes the integral reset points.
+		Both "dlli" and "nlli" return the number of lines found.
+		"nlli" is identical to "dlli" except that it doesn't display
+		the results.
+		For performing a baseline correction prior to calling "dlli"
+                or "nlli" we recommend using "maclib/bcdc".
+
+  Examples:	dlli		[ equivalent to dlli(10) ]
+		dlli(20)
+		nlli		[ equivalent to nlli(10) ]
+		nlli:r1
+
+  Related commands: dll, nll, region, dpf, ppf
