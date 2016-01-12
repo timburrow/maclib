@@ -1,0 +1,24 @@
+dshpl - displays horizontal plane at the cursor position   
+
+features : Works with all three orthogonal planes
+             irrespective of what the trace parameter is.
+
+           Displays the chemical shift of the plane index.
+
+           If getplane had not been done for the new plane    
+             macro will enquire if you want to do getplane.
+
+           Uses the axis parameter to calculate the chemical
+             shift and nucleus label of the new plane.
+
+usage : With any 2D plane display (typically the projection)
+          point the cursor cross-wire on the cross peak of interest
+          and execute the macro.
+
+        If the new plane does not exist in the extr directory
+          the macro will enquire if you want to do getplane.
+          If the answer is 'y': "getplane" is executed for the new
+          plane and the appropriate plane is displayed.
+          If the answer is 'n': the macro is aborted.
+
+related macro : dsvpl
