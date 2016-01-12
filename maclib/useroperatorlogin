@@ -1,0 +1,85 @@
+// An example useroperatorlogin macro.
+//
+// This macro is intended as an example for users to modify and/or
+// edit to fit local needs and requirements.
+//
+// To start, we might want to clear the graphics display and then post a
+// message to our operators
+
+clear(2)
+
+if (system='spectrometer') then
+	banner('Welcome to the Agilent 500 MHz NMR.')
+else
+	banner('Open a study or a .fid to begin processing your data.')
+endif
+
+// It doesn't hurt to ensure a few other things are cleaned up as well
+
+doifidle('resetsampglobal')
+
+// Keep a log file of user activity
+
+$logfile=userdir+'/user.log'
+shell('date >> '+$logfile):$e
+write('file',$logfile,'Operator: '+operator):$e
+
+
+// Update the File Browser pointers for convenience
+
+$filename=userdir+'/persistence/OpenFileBrowserDir'
+exists($filename,'file'):$exists
+if ($exists) then
+	delete($filename)
+endif
+write('file',$filename,'FileBrowser\'s Last Directories')
+$userdata=userdir+'/data/'+operator
+exists($userdata,'file'):$exists
+if ($exists) then
+	write('file',$filename,$userdata)
+else
+	write('file',$filename,userdir+'/data/')
+endif
+write('file',$filename,'File Filter: .fid')
+
+$filename=userdir+'/persistence/SaveFileBrowserDir'
+exists($filename,'file'):$exists
+if ($exists) then
+	delete($filename)
+endif
+write('file',$filename,'FileBrowser\'s Last Directories')
+$userdata=userdir+'/data/'+operator
+exists($userdata,'file'):$exists
+if ($exists) then
+//current dir
+	write('file',$filename,$userdata)
+	write('file',$filename,'File Filter: .fid')
+//first quick button
+	write('file',$filename,$userdata)
+	write('file',$filename,'File Filter: .fid')
+else
+//current dir
+	write('file',$filename,userdir+'/data/')
+	write('file',$filename,'File Filter: .fid')
+endif
+//next quick button
+write('file',$filename,userdir+'/data/')
+write('file',$filename,'File Filter: .fid')
+//next quick button
+write('file',$filename,userdir+'/data/archive')
+write('file',$filename,'File Filter: .fid')
+
+
+
+// Set some defaults
+
+pslw=2
+write('line3','setting default linewidth to 2')
+
+
+// Run a local, instrument-specific login macro
+exists('localuserlogin','maclib'):$macex
+if ($macex) then
+	exec('localuserlogin'):$e
+endif
+

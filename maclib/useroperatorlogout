@@ -1,0 +1,36 @@
+// An example useroperatorlogout macro
+//
+// This macro is intended as an example for users to modify and/or
+// edit to fit local needs and requirements.
+//
+
+// We can clean up the display when an operator logs out
+
+// ensure only 1 viewport open
+
+vnmrjcmd('vpactive',1)
+if (overlayMode) then
+	vpLayout('overlayMode','unoverlay')
+endif
+$x=2
+repeat
+	jvpexps[$x]=0
+	vnmrjcmd('viewport','select',$x,'off')
+	$x=$x+1
+until $x>9
+vpLayout('setViewports',1)
+
+// ensure the study queue is open and visible
+
+vnmrjcmd('toolpanel','ExperimentSelector','open')
+vnmrjcmd('toolpanel','Sq','open')
+
+// ensure the next person won't continue someone else's Study
+
+doifidle('resetsampglobal')
+
+// clear the viewport so the next person won't see someone else's data
+
+clear(2)
+
+
