@@ -1,0 +1,10 @@
+************************ VARIAN NMR USER GROUP LIBRARY ************************
+
+satck3d    displays 3d planes,up to 64 at a time on the screen, with projection
+
+ Syntax: satck3d(startingplane#,endingplane#>
+
+ Description: This macro will produce a series of 2D planes on the screen.
+
+
+ Examples:    satck3d(1,64)

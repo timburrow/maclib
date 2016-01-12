@@ -1,0 +1,49 @@
+clear(2)
+if plane='f1f2' then
+  $planemax=fn/2 endif
+if plane='f2f3' then
+  $planemax=fn1/2 endif
+if plane='f1f3' then
+  $planemax=fn2/2 endif
+if $2>$planemax then $2=$planemax endif 
+$start=0
+$start2=0
+sc=$start
+wc=20
+sc2=$start2
+wc2=wc
+$xgap = 5
+$ygap = 6
+if ($#=0) then
+   $sindex=1
+   $eindex=67
+else
+   $sindex=$1
+   $eindex=$2
+endif
+r2=0 r3=0
+select(plane,$sindex)
+select('prev')
+repeat
+   sc=$start +r2*(wc+$xgap)
+   sc2=$start2 + r3*(wc2+$ygap)
+   select('next')
+   dconn('noaxis')
+   box('graphics','nolimit',wcmax-sc+1,wcmax-(sc+wc)-1,sc2-1,sc2+wc2+1):$xlabel,$ylabel
+    "  if ($# = 3) then write('graphics',$xlabel,$ylabel,'%d',$sindex) endif "
+   $sindex=$sindex+1
+   r2=r2+1 
+   if r2 > 9 then
+      r2=0
+     	 r3=r3+1
+      sc=$start
+   endif
+until $sindex>=$eindex
+sc=$start +r2*(wc+$xgap)
+sc2=$start2 + r3*(wc2+$ygap)
+select('proj')
+dconn('noaxis')
+box('graphics','nolimit',wcmax-sc+1,wcmax-(sc+wc)-1,sc2-1,sc2+wc2+1):$xlabel,$ylabel
+"if ($# = 3) then   write('graphics',$xlabel,$ylabel,'proj') endif "
+dtext 
+
