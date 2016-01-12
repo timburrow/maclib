@@ -1,0 +1,23 @@
+"******************************************************"
+" dpconi - display 2D contour plot in interactive mode "
+"******************************************************"
+
+if $#=0 then
+  dconi('dpcon')
+else
+  if $#=1 then
+    dconi('dpcon',$1)
+  else
+    if $#=2 then
+      dconi('dpcon',$1,$2)
+    else
+      if $#=3 then
+	dconi('dpcon',$1,$2,$3)
+      else
+        if $#=4 then
+	  dconi('dpcon',$1,$2,$3,$4)
+        endif
+      endif
+    endif
+  endif
+endif
