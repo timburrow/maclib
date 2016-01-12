@@ -1,0 +1,104 @@
+"csll - perform a line list for C-Search"
+"usage: csll<('all')>"
+"  If 'all' keyword is included, solvents are included as type='s'"
+"  csll alone omits solvent output"
+
+$solvout=0
+if $#>0 then if $1='all' then $solvout=1 endif endif
+
+"first get lines; the threshhold is assumed to be set at this point"
+nll:$numlines
+
+"convert line list to a referenced list"
+$i=1
+repeat
+  $llfrq[$i]=llfrq[$i]-rfl+rfp
+  $i=$i+1
+until $i>$numlines
+
+"get solvent line information from /vnmr/solvents file"
+lookup('file',systemdir+'/solvents','seek',solvent,'seek','C1:')
+lookup('read',3):$solppm,$numsolvlines,$solJ
+
+"set up an array of the solvent lines"
+$i=1
+repeat
+  $solfrq[$i]=$solppm*sfrq-$solJ*trunc($numsolvlines/2)+($i-1)*$solJ
+  $i=$i+1
+until $i>$numsolvlines
+
+"now eliminate lines from the line list which match the solvents"
+"simultaneously find the biggest line in the list for scaling to 100"
+$maxpeak=0
+$whichline=1
+repeat
+  $whichsolv=1
+  $lineamp[$whichline]=llamp[$whichline]
+  repeat
+    if (($solfrq[$whichsolv]+2.0)>$llfrq[$whichline]) and
+       (($solfrq[$whichsolv]-2.0)<$llfrq[$whichline]) then
+      $lineamp[$whichline]=-llamp[$whichline]
+      "set amplitude to negative to eliminate"
+    endif
+    $whichsolv=$whichsolv+1
+  until $whichsolv>$numsolvlines
+  if $lineamp[$whichline]>$maxpeak then $maxpeak=$lineamp[$whichline] endif
+  $whichline=$whichline+1
+until $whichline>$numlines
+$scale=100/$maxpeak
+
+"determine carbon type of each line, using dept.out if present"
+$i=1
+repeat
+  $type[$i]=' ' "'CH?' default type"
+  $i=$i+1
+until $i>$numlines
+
+$numdeptlines=0
+exists(curexp+'/dept.out','file'):$e
+if $e then
+  $dept=curexp+'/dept.out'
+  lookup('file',$dept,'seek','carbons:','read'):$numdeptlines
+  lookup('file',$dept,'readline','readline','readline')
+  $i=1 $letter=''
+  repeat
+    lookup('read',5):$index,$letter,$freqhz,$freqppm,$intensity
+    if $letter='D' then $depttype[$i]='D' endif "'CH' endif"
+    if $letter='T' then $depttype[$i]='T' endif "'CH2' endif"
+    if $letter='Q' then $depttype[$i]='Q' endif "'CH3' endif"
+    $deptfreq[$i]=$freqppm*sfrq
+    $i=$i+1
+  until $i>$numdeptlines
+endif
+
+"now output the reduced line list to a file"
+
+$file='/vnmr/tmp/csll.out'
+write('reset',$file)
+write('file',$file,'')
+$header='       Peak#              Frequency (Hz) Frequency (PPM)      Height Type'
+write('file',$file,'%s',$header)
+$i=1 $depti=1
+repeat
+  if $lineamp[$i]<0 then
+    $type[$i]='s' "'Solvent'"
+    $lineamp[$i]=-$lineamp[$i]
+  else
+    if ($type[$i]=' ')and($numdeptlines>=$depti) then
+      $diff=$llfrq[$i]-$deptfreq[$depti]
+      if $diff<0 then $diff=-$diff endif
+      if $diff<5.0 then "found a match in DEPT spectrum"
+        $type[$i]=$depttype[$depti]
+        $depti=$depti+1
+      else
+        $type[$i]='S' "'C'"
+      endif
+    endif
+  endif
+  if ($type[$i]<>'s') or ($solvout=1) then
+    write('file',$file,'%10d%27.3f%14.3f%17.1f%2s',$i,$llfrq[$i],$llfrq[$i]/sfrq,$lineamp[$i]*$scale,$type[$i])
+  endif
+  $i=$i+1
+until $i>$numlines
+shell('cat '+curexp+'/text /vnmr/tmp/csll.out >'+curexp+'/csll.out; rm /vnmr/tmp/csll.out')
+cat(curexp+'/csll.out')

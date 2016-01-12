@@ -1,0 +1,28 @@
+*********************** VARIAN NMR USER GROUP LIBRARY ***********************
+                              NEW MANUAL ENTRY
+
+csll		CSEARCH line list
+
+Syntax:		csll<('all')>
+		If 'all' keyword is included, solvents are included as type='s'
+		csll alone omits solvent output
+
+Description:	Expects to find a DEPT analysis (dept.out) file in the
+		current experiment, and that the experiment currently
+		has a 1D 13C spectrum on which a line list has been
+		performed (using dll or nll). These two pieces of
+		information are combined, together with information
+		in /vnmr/solvents on where the solvent lines are
+		expected, to produce a "smart" line list with the
+		various peaks labelled. The output should be (but is
+		untested) compatible with the CSEARCH format (CSEARCH
+		is a spectral database searching program from
+		Sadtler). This macro should be considered prototypical
+		and by no means fully tested. Output from the macro is
+		sent to the file csll.out in the current experiment,
+		and is also displayed. Note that the line list output
+		is combined with the text from the experiment which
+		serves as a header for the file.
+
+		If dept.out is not found, the carbon type of all carbons is
+		set to a blank space.
