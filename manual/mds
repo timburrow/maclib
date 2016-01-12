@@ -1,0 +1,30 @@
+*************************************************************************
+  mds	- simultaneously display multiple display settings	(macro)
+  mpl	- simultaneously plot multiple display settings		(macro)
+*************************************************************************
+
+ Syntax:
+ -------
+   mds(numbers_of_stored_display_settings)
+   mpl(numbers_of_stored_display_settings)
+
+ Description:
+ ------------
+   "mds" simultaneously displays multiple display settings which have been
+	 stored previously using "s1" .. "s9" (resp. "s(1)" .. "s(9)");
+	 this is a very useful feature for setting up composite plots
+	 (e.g., a main plot and several expansions selected with the
+	 "inset" command). The arguments supplied are the numbers of the
+	 display settings to be displayed simultaneously (specified
+	 settings that are not defined will be skipped).
+
+   "mpl" on a single page pots multiple display settings which had been
+	 stored previously using "s1" .. "s9" (resp. "s(1)" .. "s(9)").
+	 The arguments are the same as for "mds", see above. It is advisable
+	 to first check the format using "mds", see above.
+	 
+
+ Examples:
+ ---------
+   mds(1,2,3,5,9)
+   mpl(1,8,3,4,5,6)

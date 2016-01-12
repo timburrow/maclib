@@ -1,0 +1,24 @@
+" @(#)mds 8.1 2/5/93 Copyright (c) 1991,1992 Varian Assoc.,Inc. All Rights Reserved "
+"*************************************************"
+" mds - automatic display of multiple expansions  "
+"       as specified by S1 ..... S9               "
+"       supply arguments accordingly              "
+"*************************************************"
+
+if ($#<1) then
+    write('error','Usage: mds(numbers_of_stored_display_settings)')
+    return
+else
+    if ($#>9) then
+	write('error','mds: too many arguments ')
+	return
+    endif
+    select:$trace
+    $count=1 $x=0 $string='' clear(2)
+    repeat
+	format(${$count},1,0):$string
+	exists(curexp+'/s'+$string,'file'):$x
+        if ($x=1) then r(${$count}) dscale dssn($trace,$trace) endif
+	$count=$count+1
+    until ($count>$#)
+endif
