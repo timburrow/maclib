@@ -1,0 +1,42 @@
+*****************************************************************************
+ fpi - report integral values from arrayed spectra  (M)
+*****************************************************************************
+
+      Syntax: fpi<('bc')>
+	      fpi<('dc')>
+	      fpi<('t1')>
+
+ Description: Following the definition of integral regions (either by hand,
+	      or using the region command), "fpi" measures the height of each
+	      integral in an array of spectra. If the keyword 'bc' or 'dc' is
+	      specified, one of commands is used to flatten the baseline or
+	      remove any baseline offset prior to evaluating the integrals.
+	      The results of the analysis are written into the text file
+	      "fpi.out" in the current experiment directory.
+	      Note: "fpi" always works on the entire spectrum, i.e., it will
+	            produce a report on all defined integral regions.
+		    Note also that "fpi" will indicate the integration limits
+		    in ppm units if "axis='p'" - if you prefer Hz units, set
+		    "axis='h'" prior to calling "fpi".
+	      The resulting output, "curexp+'/fpi.out'" does NOT comply with
+	      the VNMR commands for T1 analysis etc. - however, if an argument
+	      't1' is used, "fpi" and creates a file "curexp+'/fp.out'" which
+	      CAN be used for T1, T2 etc. analysis (note that in this case
+	      the "line positions" marked in this file are mid-points of the
+	      respective integral region).
+
+   Arguments: 'bc' - optional baseline correction on each spectrum
+	      'dc' - optional offset/drift correction on each spectrum
+	      't1' - optional creation of "curexp+'/fp.out'" which is
+		     compatible with "t1" and related commands
+	      The 'bc' and 'dc' arguments cannot be combined.
+
+    Examples: fpi
+	      axis='h' fpi axis='p'
+	      fpi('dc')
+	      fpi('bc','t1')
+	      fpi('t1','dc')
+	      fpi('t1')
+
+     Related: fp - Find peak heights or phases  (C)
+
