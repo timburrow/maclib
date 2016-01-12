@@ -1,0 +1,78 @@
+#!/bin/sh
+
+#------------------------------------------------------------------------------
+#  Compatibility section
+#------------------------------------------------------------------------------
+
+echo=`which echo`
+pwd=`which pwd`
+if [ `uname` = SunOS ]; then
+  awk=nawk
+elif [ `uname` = Linux ]; then
+  echo="$echo -e"
+  awk=awk
+elif [ `uname` = Darwin ]; then
+  awk=awk
+else
+  awk=awk
+fi
+
+
+# make sure VNMR environment variables are defined
+if [ x$vnmrsystem = x ]; then
+  vnmrsystem=/vnmr
+fi
+if [ x$vnmruser = x ]; then
+  vnmruser=$HOME/vnmrsys
+fi
+export vnmrsystem vnmruser
+vnmrpath=`(cd $vnmrsystem; $pwd)`
+vnmradmin=`ls -ld $vnmrsystem/bin | $awk '{print $3}'`
+usernow=`id | tr '()' '  ' | cut -f2 -d' '`
+wd=`$pwd`
+
+if [ ! "$usernow" = "$LOGNAME" ]; then
+  cd $wd
+  rm -rf loadbiopack loadbiopack.install loadbiopack.README
+  $echo "Username: \"$usernow\" and Logname: \"$LOGNAME\" do not agree."
+  $echo "Installation aborted. Please do a proper login for the installation."
+  $echo
+  exit 1
+fi
+
+cd loadbiopack
+if [ "$usernow" = "$vnmradmin" ]; then
+  tar cf - */* | (cd $vnmrsystem; tar xvfB -) 2>/dev/null
+  $echo '"maclib/loadbiopack" and related files transferred to /vnmr'
+  cd ..
+  if [ $wd != $vnmrpath ]; then
+    mv loadbiopack.README $vnmrpath 2> /dev/null
+  fi
+  cd $vnmrsystem/userlib
+  mv extract extract.old
+  mv extract.new extract
+  chmod 755 extract
+  rm -f $vnmruser/maclib/loadbiopack
+else
+  tar cf - maclib/* | (cd $vnmruser; tar xvfB -) 2>/dev/null
+  cd userlib
+  trial=0
+  while [ `diff extract.new $vnmrsystem/userlib/extract | wc -l` -gt 0 ]; do
+    if [ $trial -eq 0 ]; then
+      $echo ""
+      $echo "Must now install a new version of the 'userlib/extract' utility;"
+      $echo "   please provide password for $vnmradmin"
+    else
+      $echo "Administrative Part of BioPack Installation FAILED!"
+      $echo "Installation of new version of 'userlib/extract' utility FAILED!"
+      $echo "   Please try again -"
+      $echo "   you MUST now provide the password for $vnmradmin"
+    fi
+    su "$vnmradmin" -c \
+	"cd $vnmrsystem/userlib; rm -f extract.old extract.new extract.README; cp `$pwd`/* $vnmrsystem/userlib; mv extract extract.old; mv extract.new extract; chmod +x extract"
+    trial=`expr $trial + 1`
+  done
+  cd ../..
+fi
+cd $wd
+rm -rf loadbiopack loadbiopack.install

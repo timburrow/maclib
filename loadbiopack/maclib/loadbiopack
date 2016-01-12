@@ -1,0 +1,136 @@
+$vnmrinstall=0
+exists('/vnmr/userlib/psglib/BioPack.tar.Z','file'):$ul
+if not($ul) then
+  exists('/vnmr/userlib/psglib/BioPack.tgz','file'):$ul
+endif
+$vjadmin='' $me=''
+shell('ls -ld',systemdir+'/bin','| awk \'{print $3}\'; cat'):$vjadmin
+shell('id | tr "()" "  " | cut -f2 -d" "; cat'):$me
+if ($me = $vjadmin) then
+  $vnmrinstall=1
+  if not($ul) then
+    banner('Downloaded BioPack files such as\\"BioPack.tgz" MUST be stored\\in "/vnmr/userlib/psglib"\\prior to calling "loadbiopack"!')
+    return
+  endif
+else
+  if not($ul) then
+    banner('Ask the system administrator to store\\the downloaded BioPack files\\such as "BioPack.tgz"\\in "/vnmr/userlib/psglib",\\then call "loadbiopack" again!')
+    return
+  endif
+endif
+
+exists('vnmraddr','parameter','global'):$e
+if $e then
+  write('reset',userdir+'/.talk.lbp')
+  write('file',userdir+'/.talk.lbp','%s',vnmraddr)
+endif
+exists('BPinstall','parameter','global'):$BP
+if $BP=0 then create('BPinstall','real','global') endif
+BPinstall=0 
+if $vnmrinstall then
+  shell('rm -f',systemdir+'/maclib/BPglobalpar'):$dummy
+  shell('rm -f',systemdir+'/biopack/maclib/BPglobalpar'):$dummy
+  shell('cd /vnmr/userlib; xterm -geometry 80x60 -sb -sl 4000 -e ./extract -w psglib/BioPack /vnmr'):$dummy
+  exists(systemdir+'/maclib/BPfixsaveglobal','file'):$e1
+  if not($e1) then
+    exists(systemdir+'/biopack/maclib/BPfixsaveglobal','file'):$e1
+    if $e1 then
+      macrold(systemdir+'/biopack/maclib/BPfixsaveglobal'):$dummy
+    endif
+  endif
+  exists(systemdir+'/maclib/BPglobalpar','file'):$e
+  if not($e) then
+    exists(systemdir+'/biopack/maclib/BPglobalpar','file'):$e
+    if $e then
+      macrold(systemdir+'/biopack/maclib/BPglobalpar'):$dummy
+    endif
+  endif
+else
+  shell('rm -f',userdir+'/maclib/BPglobalpar'):$dummy
+  shell('rm -f',userdir+'/biopack/maclib/BPglobalpar'):$dummy
+  shell('cd /vnmr/userlib; xterm -geometry 80x60 -sb -sl 4000 -e ./extract -w psglib/BioPack'):$dummy
+  exists(userdir+'/maclib/BPfixsaveglobal','file'):$e1
+  if not($e1) then
+    exists(userdir+'/biopack/maclib/BPfixsaveglobal','file'):$e1
+    if $e1 then
+      macrold(userdir+'/biopack/maclib/BPfixsaveglobal'):$dummy
+    endif
+  endif
+  exists(userdir+'/maclib/BPglobalpar','file'):$e
+  if not($e) then
+    exists(userdir+'/biopack/maclib/BPglobalpar','file'):$e
+    if $e then
+      macrold(userdir+'/biopack/maclib/BPglobalpar'):$dummy
+    endif
+  endif
+endif
+"Now BPglobalpar is present and active / usable"
+
+if ($e)and($e1) then
+  BPglobalpar
+
+  exists('/vnmr/maclib/appdirs','file'):$appdir
+
+  if $appdir=1 then	"only VnmrJ2.2C and later"
+    banner('Select Edit/Applications from Main Menu\\  \\Enter the full BioPack path on the line under USERDIR:\\For a "/vnmr" installation (by vnmr1) the path is "/vnmr/biopack"\\For a local installation BioPack is in "vnmrsys" as "biopack"\\  (e.g., "/home/fred/vnmrsys/biopack")\\  \\Enter "BioPack" as Application Label\\Select "Enabled" from menu at left\\  \\Exit pop-up\\  \\Enter "BPrmlocalfiles" on Command Line\\Select "Activate BioPack" from "Experiments" menu\\Choose New or Copy of Current or System Probefile')
+
+    if $vnmrinstall then
+      exists('/vnmr/biopack/ghn_co','file'):$e
+    else
+      exists(userdir+'/biopack/maclib/ghn_co','file'):$e
+    endif
+
+    if $e then    "biopack was successfully installed"
+      if $vnmrinstall then
+        exists('/vnmr/maclib/loadbiopack','file'):$e
+        if $e then
+          rename('/vnmr/maclib/loadbiopack','/vnmr/maclib/loadbiopack.done')
+        else
+          exists(userdir+'/maclib/loadbiopack','file'):$e
+          if $e then
+            rename(userdir+'/maclib/loadbiopack',userdir+'/maclib/loadbiopack.done')
+          endif
+        endif
+      else
+        exists(userdir+'/maclib/loadbiopack','file'):$e
+        if $e then
+          rename(userdir+'/maclib/loadbiopack',userdir+'/maclib/loadbiopack.done')
+        endif
+      endif
+    endif
+
+  else
+
+    $vj=''
+    lookup('file','/vnmr/vnmrrev') lookup('read',1):$vj
+    format($vj,'upper'):$vj
+    substr($vj,1,5):$vj
+    if $vj='VNMRJ' then
+      banner('For VNMRJ:\\Exit and Re-Start VnmrJ\\Select "Activate BioPack" from Experiments menu\\Choose Current, New or Copy of System Probefile')
+    else
+      banner('Select MainMenu..Setup...Activate BioPack.\\Choose New or Copy of System Probefile')
+    endif
+    exists('ghn_co','maclib'):$e
+    if $e then
+      if $vnmrinstall then
+        exists('/vnmr/maclib/loadbiopack','file'):$e
+        if $e then
+          rename('/vnmr/maclib/loadbiopack','/vnmr/maclib/loadbiopack.done')
+        else
+          exists(userdir+'/maclib/loadbiopack','file'):$e
+          if $e then
+            rename(userdir+'/maclib/loadbiopack',userdir+'/maclib/loadbiopack.done')
+          endif
+        endif
+      else
+        exists(userdir+'/maclib/loadbiopack','file'):$e
+        if $e then
+          rename(userdir+'/maclib/loadbiopack',userdir+'/maclib/loadbiopack.done')
+        endif
+      endif
+    endif
+  endif
+
+else
+  write('error','BioPack installation did not complete successfully')
+endif
