@@ -1,0 +1,35 @@
+" getcelem:celem,ct "
+" VJ Tz 990603 "
+ 
+$clmct='' shell('getcelem '+curexp+'/acqfil/fid'):$clmct
+
+$l=0 length($clmct):$l
+$i=1 $chk=0
+while ($i<=$l)and($chk=0) do
+  $c='' substr($clmct,$i,1):$c
+  if ($c='.') then
+    $chk=$i
+  endif
+  $i=$i+1
+endwhile
+
+if ($chk>0) then
+  $clm='' substr($clmct,1,$chk-1):$clm
+  $cts='' substr($clmct,$chk+1,$l-$chk):$cts
+  $ce=0 format($clm,1,0):$ce
+  $ct=0 format($cts,1,0):$ct
+else
+  $ce=0 format($clmct,0):$ce
+  $ct=0
+endif
+
+exists('celem','parameter'):$ec
+if ($ec>.5) then
+  if (celem>$ce) then $ce=celem endif
+endif 
+exists('ct','parameter'):$ec
+if ($ec>.5) then
+  if (ct>$ct) then $ct=ct endif
+endif 
+
+return($ce,$ct)

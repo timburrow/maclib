@@ -1,0 +1,10 @@
+" getcelem "
+" VJ Tz 990603 "
+ 
+$celem=0 $ct=0
+shell('getcelem',curexp+'/acqfil/fid'):$celem,$ct
+
+setvalue('celem',$celem,'processed')
+setvalue('ct',$ct,'processed')
+setvalue('celem',$celem)
+setvalue('ct',$ct)

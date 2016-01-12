@@ -1,0 +1,13 @@
+*********************** VARIAN NMR USER GROUP LIBRARY ***********************
+                              NEW MANUAL ENTRY
+
+     getcelem - set ct and celem from FID file (M)
+
+Syntax:		getcelem
+
+Description:	When stopping or aborting (possibly also due to bugs in the
+		software) an experiment prematurely, the parameters ct and
+		celem may be mis-set. getcelem extracts the actual values
+		for both from the FID file (curexp+'/acqfil/fid') and sets
+		these parameters in both the "current" and the "processed"
+		parameter trees. 
