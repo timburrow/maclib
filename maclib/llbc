@@ -1,0 +1,63 @@
+" @(#)llbc 8.1 2/5/93 Copyright (c) 1991,1992 Varian Assoc.,Inc. All Rights Reserved "
+" llbc - bc correction based on lines found with 'll' "
+" Usage: llbc<(separation)> "
+"  separation is the minimum noise tail around a line; two lines fall within "
+"  the same integral region if they are separated by less than 2*separation. "
+"  The default separation is sw/100.					     "
+
+" evaluate separation parameter / argument "
+if $#=0 then
+  $separation=sw/100
+else
+  $separation=$1
+endif
+
+" create line listing (assume th has been set beforehand "
+nll:$numlines
+
+" save and then eliminate current integral reset points "
+$lifrq=lifrq
+cz
+
+$lastline=1e9	" 'previous' line "
+$open=0		" flag for open integral region "
+$ix=1		" line index "
+
+" loop over all lines from line listing "
+while ($ix <= $numlines) do
+  $line=llfrq[$ix]	" get line from listing "
+  " check distance to last line "
+  if $lastline-$line>2*$separation then
+    " separation is big enough - close last integral region "
+    if $open then
+      $pos=$lastline-rfl+rfp-$separation
+      if $pos<1-rfl+rfp then
+        $pos=1-rfl+rfp
+      endif
+      z($pos)
+    endif
+    " open new integral region "
+    $pos=$line-rfl+rfp+$separation
+    if $pos>sw-rfl+rfp-1 then 
+      $pos=sw-rfl+rfp-1
+    endif
+    z($pos)
+    $open=1
+  endif
+  $lastline=$line	" remember current line "
+  $ix=1+$ix		" increment line counter "
+endwhile
+" close last integral region "
+if ($open>0)and($numlines>0) then
+  $pos=$lastline-rfl+rfp-$separation 
+  if $pos<1-rfl+rfp then 
+    $pos=1-rfl+rfp
+  endif   
+  z($pos)
+endif
+
+" perform (spline) baseline correction "
+bc(1,80)
+
+" restore integral reset points "
+lifrq=$lifrq

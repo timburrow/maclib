@@ -1,0 +1,31 @@
+*****************************************************************************
+  llbc	-	perform baseline correction based on line listing    (macro)
+*****************************************************************************
+
+       Syntax:	llbc<(tail)>
+
+  Description:	"llbc" determines integral reset points based on a line
+		listing and performs a (spline) baseline correction
+		[ bc(1,80) ] on the signal-free regions of the spectrum.
+		llbc assumes that the threshold (th) has been adjusted
+		beforehand. All lines from the line listing (based on the
+		current threshold) are integrated with "tail" (in Hz) size
+		noise tails on either side; if two lines are closer than
+		2*tail, they fall into the same integral region. "tail" can
+		be entered as argument; the default tail size is sw/100.
+		If "tail" is selected too small, llbc may attempt to create
+		too many integral regions.
+		After performing the baseline correction, "llbc" reestores
+		the integral reset points.
+		To integrate C13 and similar spectra, you may want to use the
+		"dlli" / "nlli" macros from the "maclib/dlli" contribution.
+
+    Arguments:  "tail" (optional) is the size of the "noise tail" which is
+		added on either side of a line, as part of the signal. It
+		should cover the ENTIRE "foot" of the broadest signal. The
+		default tail size is "sw/100".
+
+     Examples:  llbc		[ equivalent to llbc(sw/100) ]
+		llbc(20)
+
+      Related:  dll, nll, region, bc
