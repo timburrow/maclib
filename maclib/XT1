@@ -1,0 +1,103 @@
+"XT1- XT1<arg>  if arg does hard copy,otherwise just on screen"
+if ($#>0) then
+font(44) r1=1 repeat
+ rm(curexp+'/expl.out')
+
+shell('ls xpk.* | sort > /vnmr/tmp/filenames; cat')
+nrecords('/vnmr/tmp/filenames'):$numtimes
+$numtimes=$numtimes-1   "last file is xpk.ref which is not desired"
+$filenames='' $i=1
+lookup('file','/vnmr/tmp/filenames')
+repeat  "for each filename"
+  lookup('read'):n1
+  $filenames[$i]=n1
+  $i=$i+1
+until $i>$numtimes
+rm('/vnmr/tmp/filenames')
+  $start=r1 $finish=r1
+write('reset','buildup.summary')
+write('reset','buildup.rawdata')
+write('file','buildup.summary','Index   f2 (ppm)   f1 (ppm)   Rate (sec)')
+$p=$start
+repeat  "for each peak"
+  $i=1
+  write('reset','analyze.inp')
+  write('file','analyze.inp','%d %d\n',1,$numtimes)
+  repeat        "for each mixing time"
+    lookup('file',$filenames[$i])
+    lookup('seek','=','read'):$mix
+    lookup('seek','Volume','skip',($p-1)*2+1,'read'):$volume
+    write('file','analyze.inp','%5.3f %6.3f',$mix/1000,$volume)
+    $i=$i+1
+  until $i>$numtimes
+  lookup('file','xpk.ref')      "to look up frequencies for labelling"
+  lookup('seek','max:','f1','freq','skip',($p-1)*8+6)
+  lookup('read',2):$f2,$f1
+  write('reset','analyze.list')
+  write('file','analyze.list',
+ 'Buildup curve for cross peak at f2=%5.2f, f1=%5.2f ppm\n',$f2/sfrq,$f1/dfrq2)
+  shell('expfit T1 list < analyze.inp >> analyze.list; cat')
+  shell('cat analyze.list >> buildup.rawdata; cat')
+  lookup('file','analyze.list','seek','T1','skip',2,'read'):$t1
+  write('file','buildup.summary','%4d%11.2f%11.2f%10.3f',$p,$f2/sfrq,$f1/dfrq2,$t1)
+  $p=$p+1
+until $p>$finish
+$rate=1/$t1
+expl
+write('graphics',50,wc2max-10,'%s relaxation curve for crosspeak %d',dn2,r1)
+write('graphics',50,wc2max-20,'at F2=%5.2f, F1=%5.2f ppm\n',$f2/sfrq,$f1/dfrq2)
+write('graphics',50,wc2max-20,'at F2=%5.2f, F1=%5.2f ppm    T1=%5.2f',$f2/sfrq,$f1/dfrq2,$t1)
+write('plotter',50,wc2max-15,'at F2=%5.2f, F1=%5.2f ppm\n',$f2/sfrq,$f1/dfrq2)
+write('plotter',50,wc2max-10,'%s relaxation curve for crosspeak %d',dn2,r1)
+write('plotter',150,wc2max-10,'%s Relaxation Rate =%8.2f',dn2,$rate)
+write('plotter',150,wc2max-15,'%s Relaxation Time =%5.2f',dn2,$t1)
+pexpl      
+page 
+r1=r1+1 until r1>16 font
+else
+r1=1 repeat
+ rm(curexp+'/expl.out')
+shell('ls xpk.* | sort > /vnmr/tmp/filenames; cat')
+nrecords('/vnmr/tmp/filenames'):$numtimes
+$numtimes=$numtimes-1   "last file is xpk.ref which is not desired"
+$filenames='' $i=1
+lookup('file','/vnmr/tmp/filenames')
+repeat  "for each filename"
+  lookup('read'):n1
+  $filenames[$i]=n1
+  $i=$i+1
+until $i>$numtimes
+rm('/vnmr/tmp/filenames')
+  $start=r1 $finish=r1
+write('reset','buildup.summary')
+write('reset','buildup.rawdata')
+write('file','buildup.summary','Index   f2 (ppm)   f1 (ppm)   Rate (sec)')
+$p=$start
+repeat  "for each peak"
+  $i=1
+  write('reset','analyze.inp')
+  write('file','analyze.inp','%d %d\n',1,$numtimes)
+  repeat        "for each mixing time"
+    lookup('file',$filenames[$i])
+    lookup('seek','=','read'):$mix
+    lookup('seek','Volume','skip',($p-1)*2+1,'read'):$volume
+    write('file','analyze.inp','%5.3f %6.3f',$mix/1000,$volume)
+    $i=$i+1
+  until $i>$numtimes
+  lookup('file','xpk.ref')      "to look up frequencies for labelling"
+  lookup('seek','max:','f1','freq','skip',($p-1)*8+6)
+  lookup('read',2):$f2,$f1
+  write('reset','analyze.list')
+  write('file','analyze.list',
+ 'Buildup curve for cross peak at f2=%5.2f, f1=%5.2f ppm\n',$f2/sfrq,$f1/dfrq2)
+  shell('expfit T1 list < analyze.inp >> analyze.list; cat')
+  shell('cat analyze.list >> buildup.rawdata; cat')
+  lookup('file','analyze.list','seek','T1','skip',2,'read'):$t1
+  write('file','buildup.summary','%4d%11.2f%11.2f%10.3f',$p,$f2/sfrq,$f1/dfrq2,$t1)
+  $p=$p+1
+until $p>$finish
+expl
+write('graphics',50,wc2max-10,'%s relaxation curve for crosspeak %d',dn2,r1)
+write('graphics',50,wc2max-20,'at F2=%5.2f, F1=%5.2f ppm    T1=%5.2f',$f2/sfrq,$f1/dfrq2,$t1)
+r1=r1+1 until r1>16
+endif

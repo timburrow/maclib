@@ -1,0 +1,16 @@
+XT1- a macro to produce a series of displays with optional plots
+
+1. First collect a series of HSQC spectra that differ only in a
+   relaxation time for the X nucleus (see hsqcT1.c for example).
+2. Create a directory of some name and cd to it.
+3. display region of 2D data for analysis and use two cursors and
+   the "mark" button to create a mark2D.out file in one of the
+   experiments (probably the one with the shortest relaxation delay).
+4. Use the "getxpk" macro from the Userlib- first, as
+   getxpk('reference'). Then use as getxpk (for that experiment). 
+5. Join each experiment in turn and use "getxpk". This will result
+   in a series of data files in the directory created in step 2.
+6. Copy the contents of that directory into one of the experiments
+   used, for example cp -r /home/myfiles/t1data /home/vnmrsys/exp4.
+7. Join that experiment and enter XT1 to view the relaxation curves.
+8. For plots, just enter XT1(1).
