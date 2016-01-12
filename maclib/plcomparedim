@@ -1,0 +1,120 @@
+" @(#)plcomparedim 8.1 2/5/93 Copyright (c) 1991,1992 Varian Assoc.,Inc. All Rights Reserved "
+"****************************************************************************"
+" plcomparedim - compare rectangular portions of a homonuclear correlated 2D "
+"           spectrum by superimposing the same expansion both in f1 and f2   "
+"	    (same as comparedim, but makes output to plotter)		     "
+"****************************************************************************"
+
+" check arguments "
+if $#<1 then
+  $pos=''
+  $levels=12
+  $spacing=1.5
+else
+  $t1=typeof('$1')
+  if $t1=1 then
+    $pos=$1
+    $ix=2
+  else
+    $ix=1
+  endif
+  if $#>=$ix then
+    $levels=${$ix}
+  else
+    $levels=12
+  endif
+  $ix=1+$ix
+  if $#>=$ix then
+    $spacing=${$ix}
+  else
+    $spacing=1.5
+  endif
+endif
+if dmg='av' then $pos='' endif
+
+" check on type of 2D spectrum "
+$diff=sw-sw1
+if $diff<0 then $diff=0-$diff endif
+if $diff>1 then
+  write('error','plcomparedim only works with sw = sw1')
+  return
+endif
+
+" remember display parameters "
+$trace=trace $axis=axis
+s9
+
+" expand region selected by cursors "
+wp=delta sp=cr-delta wp1=delta1 sp1=cr1-delta1   "expand"
+
+" decide whether to split screen horizontally or vertically "
+" calculate the ratio of the hz/mm in both dimensions and   "
+"    for both splittings (ratio>1); take the more balanced  "
+"    of the two solutions (i.e., the orientation where the  "
+"    the ratio is closer to 1.				    "
+$xh=0.4*wcmax $yh=1.0*wc2max	" (these are approximations, see below) "
+$xv=0.9*wcmax $yv=0.4*wc2max
+if $trace='f1' then
+  $xhhzmm=wp1/$xh $yhhzmm=wp/$yh
+  $xvhzmm=wp1/$xv $yvhzmm=wp/$yv
+else  " trace='f2' "
+  $xhhzmm=wp/$xh $yhhzmm=wp1/$yh 
+  $xvhzmm=wp/$xv $yvhzmm=wp1/$yv 
+endif
+$hratio=$xhhzmm/$yhhzmm  
+if $hratio<1 then 
+  $hratio=1/$hratio  
+endif  
+$vratio=$xvhzmm/$yvhzmm   
+if $vratio<1 then  
+  $vratio=1/$vratio   
+endif  
+if $hratio<$vratio then 
+  $horiz=1
+else
+  $horiz=0
+endif
+
+" set chart parameters "
+if $horiz=0 then
+  wc2=wc2max/2-10 sc2=0
+  sc=2 wc=wcmax-25-sc
+  axis='pp'
+else
+  sc=2 wc=wcmax/2-25-sc
+  sc2=0 wc2=wc2max-2
+  axis='pp'
+endif
+
+" plot current expansion at bottom (resp. right) "
+if $pos<>'' then
+  pcon($pos,$levels,$spacing)
+else
+  pcon($levels,$spacing)
+endif
+
+" switch trace mode "
+if trace='f1' then trace='f2' else trace='f1' endif
+
+" switch to other dimension "
+$wp=wp $sp=sp wp=wp1 sp=sp1 wp1=$wp sp1=$sp
+
+" switch to the other half of the screen "
+if $horiz=0 then
+  sc2=wc2max-2-wc2
+  axis='pp'
+else
+  sc=wcmax-25-wc
+  axis='pp'
+endif
+
+" plot the 'other' dimension "
+if $pos<>'' then
+  pcon($pos,$levels,$spacing)
+else
+  pcon($levels,$spacing)
+endif
+
+" reactivate display "
+trace=$trace axis=$axis
+r9 dconi('restart')
