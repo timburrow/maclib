@@ -1,0 +1,26 @@
+"writespec - write a (portion of a) spectrum into an ASCII file"
+"                                       S.L.Patt, 30 March 1993"
+"usage: writespec('filename') writes the spectrum from sp+wp to sp"
+"         into a file in an ASCII format"
+
+$sp=sp $wp=wp
+f $dd=sw-wp
+wp=$wp sp=$sp
+$res=sw/(fn/2)
+if $dd<$res/2 then
+  $res=sw/(fn/2-1)
+endif
+if ($#<1) then
+  write('error','Usage: writespec(\'filename\')')
+else
+  mark('reset')
+  write('line3','Creating file %s...',$1)
+  write('reset',$1)
+  $delta=$res $f=sp+wp
+  repeat
+    mark($f):$ht
+    write('file',$1,'%f',$ht)
+    $f=$f-$delta
+  until $f<sp
+  write('error','Done!')
+endif

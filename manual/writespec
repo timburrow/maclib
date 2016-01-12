@@ -1,0 +1,12 @@
+*********************** VARIAN NMR USER GROUP LIBRARY ***********************
+                              NEW MANUAL ENTRY
+
+writespec	Write a (portion of a) spectrum into an ASCII file
+
+Syntax:		writespec('filename')
+
+Description:	Writes an ASCII file representing the spectrum from
+		sp+wp (first point in the file) to sp (last point)
+
+Examples:	writespec('mydata')
+		writespec('/home/vnmr1/mydata')
