@@ -1,0 +1,9 @@
+************************ VARIAN NMR USER GROUP LIBRARY ************************
+
+compare       displays  two 2D contour maps        
+
+ Syntax:      compare
+
+ Description: This macro will produce two dpcon displays, permitting comparison
+              of cross-peaks on both sides of a diagonal in symmetric 2D spectra
+              such as noesy, cosy, tocsy and roesy.

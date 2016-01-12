@@ -1,0 +1,50 @@
+"      Varian Associates    VNMR   @(#)hammexp  1.2    1/7/89 "
+"****************************************************************************"
+" compare - compare rectangular portions of a homonuclear correlated 2D      "
+"           spectrum by superimposing the same expansion both in f1 and f2   "
+"****************************************************************************"
+" usage:  in dconi select region (usually a horizontal rectangle) with the   "
+"         cursors, then call the 'compare' macro; the original display       "
+"         can be reinstalled with 'r9 dconi'.                                "
+"         use compare('pos') to display positive contours only               "
+if $#<1 then $pos='n' else $pos='y' endif
+$trace=trace $axis=axis
+s9
+wp=delta sp=cr-delta wp1=delta1 sp1=cr1-delta1   "expand"
+if (wp/sw*fn*wp1/sw1*fn1<1024*512) or ($pos='y') then
+ $cont='y' else $cont='n'
+endif
+if dmg='av' then $pos='n' endif
+full wc2=wc2max/2-5 sc2=wc2max/2
+if trace='f1' then
+ axis='pn'
+ if ($pos='y') or ($cont='y') then
+  if $pos='y' then dpcon('pos',20,1.5) else dpcon(20,1.5) endif
+ else
+  if $pos='y' then dcon('avcolor') else dcon endif
+ endif 
+else
+ axis='np'
+ if ($pos='y') or ($cont='y') then
+  if $pos='y' then dpcon('pos',20,1.5) else dpcon(20,1.5) endif
+ else
+  if $pos='y' then dcon('avcolor') else dcon endif
+ endif 
+endif
+if trace='f1' then trace='f2' else trace='f1' endif
+$wp=wp $sp=sp wp=wp1 sp=sp1 wp1=$wp sp1=$sp sc2=0 axis='pp'
+if trace='f1' then
+ if ($pos='y') or ($cont='y') then
+  if $pos='y' then dpconn('pos',20,1.5) else dpconn(20,1.5) endif
+ else
+  if $pos='y' then dconn('avcolor') else dconn endif
+ endif 
+else
+ if ($pos='y') or ($cont='y') then
+  if $pos='y' then dpconn('pos',20,1.5) else dpconn(20,1.5) endif
+ else
+  if $pos='y' then dconn('avcolor') else dconn endif
+ endif 
+endif
+trace=$trace axis=$axis
+write('line3','type \'r9 dconi\' for switching back to the original display.')
