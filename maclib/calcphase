@@ -1,0 +1,13 @@
+"calcphase - calculate the phase of a spectrum based on the first two"
+"            points of the FID (i.e., first complex point)"
+"	     Not tested for dp=n data"
+"                                  S.L.Patt, Varian, 8 July 1992"
+$file=curexp+'/acqfil/fid'
+if dp='n' then $format='o' $skip=35 else $format='l' $skip=19 endif
+$thecommand='od -'+$format+' '+$file+' > /vnmr/tmp/thefid; cat'
+shell($thecommand)
+lookup('file','/vnmr/tmp/thefid','skip',$skip,'read','skip','read'):r1,r2
+atan(r1/r2):$angle
+$angle=360*$angle/(2*3.14159)
+echo('Real=',r1,' Imag=',r2,' Angle=',$angle)
+rm('/vnmr/tmp/thefid')

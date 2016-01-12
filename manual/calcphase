@@ -1,0 +1,13 @@
+*********************** VARIAN NMR USER GROUP LIBRARY ***********************
+                              NEW MANUAL ENTRY
+
+calcphase	Calculate the phase of a spectrum based on the FID
+
+Syntax:		calcphase
+
+Description:	For situations in which the first complex point of the FID
+		occurs exactly at time zero (e.g., an echo), the phase of
+		a spectrum can be calculated by examing the first real and
+		imaginary point and calculating the arc tangent; this is
+		what calcphase does. The calculated phase is simply
+		displayed, not applied to the spectrum.
