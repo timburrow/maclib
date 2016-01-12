@@ -1,0 +1,92 @@
+
+*******************************************************************************
+ nph	- phase correction for spectra that are dominated by
+	  broad features (e.g. oil fraction spectra)		(macro/program)
+*******************************************************************************
+
+ 13C oil fraction NMR spectra normally consist of three features: a broad
+ aromatic / olefinic signal, an even broader aliphatic signal, and the solvent
+ lines.  "aph" will usually be very inaccurate on such spectra, since the main
+ spectral features are clearly non-lorentzian (or gaussian) signals, often
+ with long tails at the low-field end. Yet for accurate integration (to
+ determine the olefinic/aliphatic ratio) perfect phasing is prerequisite - 
+ especially, since over the entire signal range there is fairly little
+ baseline. [ "aph" will usually not fail completely for such difficult spectra,
+ but it will just produce inaccurate and irreproducible results. ]
+ L.W. Sterna & V.P. Tong from the Shell Westhollow Research Center in
+ Houston have invented and published a new method for phasing such spectra
+ [ FUEL 70, 941 (1991) ]. Their implementation was written in FORTRAN on
+ a microcomputer. The VNMR implementation is a complete reimplementation
+ and was carefully optimized independently. Most of the implementation is
+ in a C program external to VNMR which is called from within the macro.
+ The nph macro is written specifically for petrochemical applications,
+ but it can easily be adapted for other situations and other nuclei, see
+ below.
+
+ Usage:  nph		[ general application ]
+	 nph('fuel')	[ 13C oil fraction spectra ]
+
+
+ Description:
+ ------------
+ "nph" calculates slope and intercept for two straight (flat) baseline areas
+ around dominating signal groups (preferably two groups at both ends of the 
+ spectral window) using linear regression analysis. These straight lines
+ (linear functions) are then extended under the signal area and an r.m.s.
+ difference between the two functions is calculated. The phase of the
+ spectrum is then changed in an iterative manner, in order to minimize
+ this r.m.s. error. This adjustment is first done on a highfield signal,
+ adjusting rp only. After that "nph" switches several times between lowfield
+ and highfield signals, adjusting lp and rp such that the other signal keeps
+ its phase, simulating a careful, iterative manual adjustment.
+ The entire procedure is performed in an external C program, /vnmr/bin/nph,
+ which has the following syntax:
+
+	nph exp_file index [8 noise limits] rp lp
+
+ exp_file is the experiment directory (e.g., /home/vnmr1/vnmrsys/exp3)
+ index is the number of the current trace (1 for non-arrayed spectra)
+ the next 8 arguments are noise limits in data points from the left edge
+	of the spectrum (8 integers). These limits don't have to be sorted -
+	this taken care of by the software. Note that the four noise regions
+	cannot overlap.
+ rp lp are the current values of rp and lp
+
+ "nph" will work on ~/vnmrsys/exp<n>/datdir/data (the transformed spectrum).
+ It creates an iteration protocol ~/vnmrsys/exp<n>/nph.out that documents the
+ progress of the iteration and the number of iterations.
+ The task of the macro "nph" is, to calculate the reset points properly, and
+ to set up the arguments to /vnmr/bin/nph. It also flushes the memory buffers,
+ to make sure the data are on the disk before /vnmr/bin/nph is called.
+
+ "nph" expects the four noise areas to be defined as integral reset points
+ (8 reset points). The noise areas should be as flat as possible (when pro-
+ perly phased, of course), as close as possible to the signal area (but outside
+ the lorentzian lineshape), and also away from the influence of neighbouring
+ signal groups.
+ It is strongly recommended to adjust the acquisition parameters such that
+ only a small first order phase correction is obtained (using either "hoult"
+ or "calfa") - this will produce a much flatter baseline and improve the
+ results with "nph". Also, different from "aph", "nph" is NOT independent of
+ the current phasing. For "nph" to function properly, the phase should be
+ preadjusted as well as possible (a good preadjustment will also speed up
+ the iteration). Preadjustment can either be done using "aph" or, if "aph"
+ proves to be unreliable for a specific application, by estimating "lp" and
+ adjusting rp using "aph0":
+
+	lp=-360*sw*(alfa+rof2)/1e6
+        aph0
+
+ Misadjusted phases can make "nph" fail completely - it is only supposed to
+ do the fine adjustment.
+ It also is better to use gaussian functions for reducing the noise as
+ opposed to simple exponential line broadening, since lb will also widen
+ the base of the signals (which will make the lorentzian tails overlap with
+ the noise regions that are used for the phase adjustment).
+
+ For petrochemical applications (13C spectra) the macro has built-in noise
+ limits at 165/156, 104/95, 74/63 and 0/-12 ppm. These can be invoked by
+ supplying an argument to the macro (any argument will do).
+
+
+ See also: aph, aph0, hoult, calfa

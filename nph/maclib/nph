@@ -1,0 +1,108 @@
+" @(#)nph 8.1 2/5/93 Copyright (c) 1991,1992 Varian Assoc.,Inc. All Rights Reserved "
+" nph - automatic phasing for oil fraction 13C spectra	"
+
+" SHELL algorithm						"
+"	lit.: L.W. Sterna & V.P. Tong, FUEL 70, 941 (1991).	"
+
+" started  92/4/2	r.kyburz "
+" revised  92/9/20	r.kyburz, working, final version with everything "
+"				  in macro, except for rms calculation.  "
+"				  performance: 3' for 65k spectrum on    "
+"				  a SPARCstation IPX (4/50)
+" revised  92/9/22	r.kyburz, entire iteration moved into the C	 "
+"				  program. Performance for the same case "
+"				  now 7 sec (program) and 13 sec (macro) "
+"				  total, with two additional iterations. "
+" revised  92/9/23	r.kyburz, expanded for other types of spectra    "
+
+
+if ($#=0) or (tn<>'C13') then
+  numreg:$regions
+  if $regions<>4 then
+    write('error','nph:  four flat noise regions must be integrated!')
+    return(0)
+  else
+    getreg(1):$reset1,$reset2
+    getreg(2):$reset3,$reset4
+    getreg(3):$reset5,$reset6
+    getreg(4):$reset7,$reset8
+  endif
+else
+  $reset1=170*sfrq  $reset2=156*sfrq	" original values were 165/156 ppm "
+  $reset3=104*sfrq  $reset4= 92*sfrq	" original values were 104/ 95 ppm "
+  $reset5= 72*sfrq  $reset6= 63*sfrq 	" original values were  74/ 63 ppm "
+  $reset7=  6*sfrq  $reset8=-12*sfrq	" original values were   0/-12 ppm "
+endif
+
+" remember graphics mode "
+graphis:$ds
+substr($ds,1,2):$ds12
+
+" first noise region (typically left side of aromatic area) "
+$noise1lo=(1-($reset1+rfl-rfp)/sw)*fn/2
+$noise1hi=(1-($reset2+rfl-rfp)/sw)*fn/2
+format($noise1lo,1,0):$start1
+format($noise1hi,1,0):$end1
+
+" second noise region (typically right side of aromatic area) "
+$noise2lo=(1-($reset3+rfl-rfp)/sw)*fn/2
+$noise2hi=(1-($reset4+rfl-rfp)/sw)*fn/2
+format($noise2lo,1,0):$start2
+format($noise2hi,1,0):$end2
+
+" third noise region (typically left side of aliphatic area) "
+$noise3lo=(1-($reset5+rfl-rfp)/sw)*fn/2
+$noise3hi=(1-($reset6+rfl-rfp)/sw)*fn/2
+format($noise3lo,1,0):$start3
+format($noise3hi,1,0):$end3	
+
+" fourth noise region (typically right side of aliphatic area) "
+$noise4lo=(1-($reset7+rfl-rfp)/sw)*fn/2
+$noise4hi=(1-($reset8+rfl-rfp)/sw)*fn/2
+format($noise4lo,1,0):$start4
+format($noise4hi,1,0):$end4 
+
+select:$ix
+$ixs='' format($ix,1,0):$ixs
+format(rp,3,1):$rps
+format(lp,3,1):$lps
+
+" To make sure the transformed spectrum is on the disk "
+"    we must flush the memory buffers. 		       "
+flush
+write('line3','nph: performing iterative phase adjustment, please wait ... ')
+shell('nph',curexp,$ixs,$start1,$end1,$start2,$end2,
+			$start3,$end3,$start4,$end4,$rps,$lps):rp,lp
+write('line3','')	" clear line3 after calculation "
+
+" reactivate spectrum display, if spectrum was on display before "
+if $ds12='ds' then
+  exec($ds+'('+$ixs+')')
+  if $#>1 then
+    pen('graphics','yellow')
+    $lpos=wcmax-sc-(170*sfrq-sp)/wp*wc
+    $rpos=wcmax-sc-(160*sfrq-sp)/wp*wc
+    move($lpos,sc2+vp+20)
+    draw($lpos,sc2+vp)
+    draw($rpos,sc2+vp)
+    draw($rpos,sc2+vp-20)
+    $lpos=wcmax-sc-(104*sfrq-sp)/wp*wc
+    $rpos=wcmax-sc-(95*sfrq-sp)/wp*wc
+    move($lpos,sc2+vp+20)
+    draw($lpos,sc2+vp)
+    draw($rpos,sc2+vp)
+    draw($rpos,sc2+vp-20)
+    $lpos=wcmax-sc-(74*sfrq-sp)/wp*wc
+    $rpos=wcmax-sc-(63*sfrq-sp)/wp*wc
+    move($lpos,sc2+vp+20)
+    draw($lpos,sc2+vp)
+    draw($rpos,sc2+vp)
+    draw($rpos,sc2+vp-20)
+    $lpos=wcmax-sc-(0-sp)/wp*wc
+    $rpos=wcmax-sc-(-12*sfrq-sp)/wp*wc
+    move($lpos,sc2+vp+20)
+    draw($lpos,sc2+vp)
+    draw($rpos,sc2+vp)
+    draw($rpos,sc2+vp-20)
+  endif
+endif
