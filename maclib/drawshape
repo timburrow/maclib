@@ -1,0 +1,95 @@
+"drawshape - draw a waveform shape (amplitude and phase) on the screen"
+"usage: drawshape(shapename<,'phase','amplitude','plotter','maxy',maxy,"
+"                  'color',color,'vp',vp,'nolines','noclear','no180'>)"
+"       where shapename is looked for first in the user's shapelib"
+"                       and then in the system shapelib"
+"             'phase' plots the phase of the shape only"
+"             'amplitude' plots amplitude only"
+"             'plotter' indicates to plot instead of draw the shape"
+"             'nolines' does not draw vertical lines between steps"
+"             'maxy',maxy sets the maximum y scale (which otherwise defaults"
+"                       to wc2max)"
+"             'color',color sets the color (default 'yellow')"
+"             'vp',vp sets the starting vp"
+"             'noclear' doesn't clear screen"
+"             'no180' doesn't show 180 phase changes as negative amplitude"
+" drawshape scales the y-axis assuming that the shape ranges from 0-1023"
+" and the x-axis according to the number of steps in the shape"
+" Only '.RF' shapes are drawn"
+" Examples: drawshape('gauss')"
+"           drawshape('gauss','plotter','maxy',wc2max/2,'color','red')"
+
+$name='/shapelib/'+$1+'.RF'
+$input=systemdir+$name
+exists($input,'file'):$e "first check system shapelib"
+if not $e then "check user's shapelib"
+  $input=userdir+$name
+  exists($input,'file'):$e
+  if not $e then write('error','Can\'t find file in shapelib') return endif
+endif
+"set defaults"
+$output='graphics' $drawphase=0 $lines=1 $maxy=wc2max $vp=0 $color='yellow'
+$clear=1 $no180=0 $both=1
+$arg=2
+while $arg<=$# do "read input arguments"
+  if (${$arg}='plotter') then $output='plotter' 
+  else if (${$arg}='amplitude') then $both=0 $drawphase=0
+  else if (${$arg}='phase') then $both=0 $drawphase=1
+  else if (${$arg}='nolines') then $lines=0
+  else if (${$arg}='maxy') then $arg=$arg+1 $maxy=${$arg}
+  else if (${$arg}='color') then $arg=$arg+1 $color=${$arg}
+  else if (${$arg}='vp') then $arg=$arg+1 $vp=${$arg}
+  else if (${$arg}='noclear') then $clear=0
+  else if (${$arg}='no180') then $no180=1
+  endif endif endif endif endif endif endif endif endif
+  $arg=$arg+1
+endwhile
+nrecords($input):$numsteps
+lookup('file',$input)
+$i=1 $comments=0 $inline='' $firstchar=''
+repeat
+  lookup('readline'):$inline
+  substr($inline,1,1):$firstchar
+  if $firstchar='#' then $comments=$comments+1 endif
+  $i=$i+1
+until $i>$numsteps
+$numsteps=$numsteps-$comments
+$delx=wcmax/$numsteps
+$pass=1
+repeat
+  if $both then
+    if $pass=1 then $drawphase=0 $maxy=wc2max/2 $vp=0 $no180=1
+               else $drawphase=1 $vp=wc2max/2 $clear=0 $lines=0
+    endif
+  endif
+  if $drawphase then $ymult=$maxy/360 else $ymult=$maxy/1023 endif
+  pen($output,$color) if $clear then clear(2) endif
+  lookup('file',$input)
+  $i=1
+  while $i<=$comments do lookup('readline') $i=$i+1 endwhile "skip comments"
+  $i=1 $lasty=0
+  repeat "for each step in the shape"
+    lookup('read',3):$phase,$amp,$gate
+    if ($phase<0) then repeat $phase=$phase+360 until $phase>0 endif
+    if ($phase>360) then repeat $phase=$phase-360 until $phase<360 endif
+    if ($phase>=180.0) then
+      if $no180 then pen($output,'cyan') else $amp=-$amp endif
+    else
+      pen($output,$color)
+    endif
+    $x=($i-1)*$delx
+    if $drawphase then $y=$phase*$ymult else $y=$amp*$ymult endif
+    if $lines then
+      if $lasty<$y then
+        move($x,$lasty+$vp) draw($x,$y+$vp)
+      else
+        move($x,$y+$vp)
+      endif
+      draw($x+$delx,$y+$vp) draw($x+$delx,$vp) draw($x,$vp)
+    else
+      if ($i=1) then move($x,$y+$vp) else draw($x,$y+$vp) endif
+    endif
+    $i=$i+1 $lasty=$y
+  until $i>$numsteps
+  $pass=2
+until ($both=0) or ($drawphase=1)

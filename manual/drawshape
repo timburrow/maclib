@@ -1,0 +1,34 @@
+************************ VARIAN NMR USER GROUP LIBRARY *************************
+                               NEW MANUAL ENTRY
+
+drawshape              Draws waveform shapes on the screen or plotter
+
+               Syntax: drawshape(shapename<,'phase','amplitude','plotter',
+                        'maxy',maxy,'color',color,'vp',vp,'nolines',]
+                        'noclear','no180'>)
+
+          Description: Draws a waveform shape (amplitude and phase) on the
+                       screen or plotter. Scales the y-axis assuming that the
+                       shape ranges from 0-1023 and the x-axis according to
+                       the number of steps in the shape. Only '.RF' shapes are
+                       drawn. "shapename" is first looked for in the user's
+                       shapelib and then in the system shapelib.
+
+                       The optional keywords are:
+                       'phase' plots the phase of the shape only
+                       'amplitude' plots amplitude only
+                       'plotter' indicates to plot instead of draw the shape
+                       'nolines' does not draw vertical lines between steps
+                       'maxy',maxy sets the maximum y scale
+                          (which otherwise defaults to wc2max)
+                       'color',color sets the color (default 'yellow')
+                       'vp',vp sets the starting vp (default 0)
+                       'noclear' doesn't clear screen
+                       'no180' doesn't show 180 phase changes as negative
+                           amplitude"
+
+             Examples: drawshape('gauss')
+                       drawshape('gauss','plotter','amplitude','maxy',40)
+                       drawshape('hrm90','nolines','color','red','noclear')
+
+
