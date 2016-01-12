@@ -1,0 +1,30 @@
+*********************** VARIAN NMR USER GROUP LIBRARY ***********************
+                              NEW MANUAL ENTRY
+
+getxpk 		Get cross-peaks from a 2D data set
+
+Syntax:		getxpk<('reference')>
+
+Description:	1) join an experiment with a processed 2d data set 
+		2) prepare a peak list peaks.bin in the current experi-
+		   ment using the ll2d menu functions from dconi
+		3) cd to a directory in which you want to write all the
+		   volume integral information
+		4) type getxpk('reference') to establish a file in this
+		   directory named xpk.ref which will be a copy of the
+		   mark2d.out file and which will be used to establish
+		   the reference regions. The macro checks if the file
+		   peaks.bin exists, and if it does, converts it into
+		   an ASCII file ll2d/mark2d.out.
+		   This command will also create a reduced file con-
+		   taining only region index and volume integral; this
+		   file will be named xpk.nnn, where nnn is the mixing
+		   time in msecs.
+		5) join other experiments or recall other 2D data sets
+		   into the same experiment, as desired, and type
+		   getxpk; repeat step 6 for all mixing times;
+		   a series of xpk.nnn files will be created.
+		6) process the series of lists with 'buildup' (at least
+		   four different mixing times are required)
+
+See also:	buildup

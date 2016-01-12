@@ -1,0 +1,18 @@
+*********************** VARIAN NMR USER GROUP LIBRARY ***********************
+                              NEW MANUAL ENTRY
+
+buildup		Calculate buildup curve time constant for specified peak
+
+Syntax:		buildup<(n)>
+
+Description:	n is the index of the cross-peak of interest
+		buildup with no arguments calculates buildup curves for all
+		cross-peaks. buildup should be preceded by the use of the
+		macro getxpk to create a series of files named xpk.nnn,
+		where nnn is the mixing time in milliseconds.
+		To plot the results use
+			autoscale
+			expl('file','analyze.out')	" displays the result "
+			pexpl('file','analyze.out')	" plots the result "
+
+See also:	getxpk

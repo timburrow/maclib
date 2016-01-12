@@ -1,0 +1,127 @@
+"getxpk - get cross-peaks from a 2D data set                    "
+
+"usage: 1) join an experiment with a processed 2d data set      "
+"       2) prepare a peak list peaks.bin in the current experi- "
+"	    ment using the ll2d menu functions from dconi	"
+"       3) cd to a directory in which you want to write all the "
+"           volume integral information                         "
+"       4) type getxpk('reference') to establish a file in this "
+"           directory named xpk.ref which will be a copy of the "
+"           mark2d.out file and which will be used to establish "
+"           the reference regions. The macro checks if the file	"
+"	    peaks.bin exists, and if it does, converts it into	"
+"	    an ASCII file ll2d/mark2d.out.			"
+"	    This command will also create a reduced file con-	"
+"	    taining only region index and volume integral; this	"
+"	    file will be named xpk.nnn, where nnn is the mixing "
+"	    time in msecs.     					"
+"       5) join other experiments or recall other 2D data sets  "
+"           into the same experiment, as desired, and type      "
+"           getxpk; repeat step 6 for all mixing times;         "
+"           a series of xpk.nnn files will be created.          "
+" 	6) process the series of lists with 'buildup' (at least	"
+"	    four different mixing times are required)		"
+
+"   94/03/14 - modified for VNMR 4.3, Adolf Gogoll,		"
+"	       University of Uppsala, Sweden			"
+"   97/02/06 - modified for VNMR 5.3, Rolf Kyburz; now uses	"
+"	       ll2d('mark') and ll2d('info') instead of mark	"
+
+if $#>0 then      "verify existence of reference file  "
+   if $1='reference' then
+      exists(curexp+'/ll2d/mark2d.out','file'):$e 
+      if $e then 
+	 rm(curexp+'/ll2d/mark2d.out')
+      endif
+      exists(curexp+'/ll2d/peaks.bin','file'):$e2
+      if not($e2) then 
+         write('error','No peak list found in the current experiment!')
+         return(1) 
+      endif
+      write('alpha','%s: creating new reference file "xpk.ref"',$0)
+      ll2d('writetext','xpk.ref')
+    else
+       write('error','Usage: %s<(\'reference\')>',$0)
+       return(1) 
+    endif
+else
+    exists('xpk.ref','file'):$y  "check current directory for reference pks"
+    if not $y then                 
+      write('error','file xpk.ref does not exist in current directory')
+      abort
+    else
+      write('alpha','%s: reference file xpk.ref found',$0)
+    endif
+endif
+
+" make sure integral referencing parameters are set up for VNMR 5.3 "
+exists('insref','parameter'):$e
+if not($e) then
+  create('insref','real')
+  setgroup('insref','processing')
+  insref=1
+endif
+on('insref'):$on
+if $on then
+  off('insref')
+endif
+exists('ins2ref','parameter'):$e
+if not($e) then
+  create('ins2ref','real')
+  setgroup('ins2ref','processing')
+  ins2ref=1
+endif
+on('ins2ref'):$on
+if $on then
+  off('ins2ref')
+endif
+
+nrecords('xpk.ref'):$numpeaks   "$numpeaks is related to the number of peaks"
+$numpeaks=($numpeaks-6)/5
+write('alpha','%s: there are %d peaks in the reference file',$0,$numpeaks)
+
+" integrating the current spectrum "
+" if $#=0 then "
+  " as ll2d('mark') doesn't integrate the same way as ll2d('volume') 	"
+  " in an automatically ll2d-processed 2D spectrum, we need to also	"
+  " integrate the reference spectrum using ll2d('mark'), even though 	"
+  " the automatic ll2d integration is more accurate      		"
+  ll2d('reset')
+  if crmode<>'b' then
+    write('alpha','%s: switching dconi to "box" mode',$0)
+    dconi('toggle')
+  endif
+  write('alpha','%s: integrating 2D spectrum based on reference file',$0)
+  $i=1
+  $dum1='' $dum2=''
+  lookup('file','xpk.ref','seek','FWHH2','readline'):$dum1  "position file"
+  $hif1=0 $lof1=0 $hif2=0 $lof2=0
+  repeat  
+    lookup('readline',2,'skip',7,'read',4):$dum1,$dum2,$lof1,$hif1,$lof2,$hif2
+    cr1=$hif1*sfrq delta1=($hif1-$lof1)*sfrq
+    cr=$hif2*sfrq delta=($hif2-$lof2)*sfrq
+    ll2d('mark'):$dum
+    $i=$i+1
+  until $i>($numpeaks)
+" endif "
+
+exists('mix','parameter'):$e
+if $e then
+  $mix=mix
+else
+  $mix=0
+endif
+format(1000*$mix,0,0):n1         "generate file name"
+$outfile='xpk.'+n1
+write('alpha','%s: writing output file %s',$0,$outfile)
+write('reset',$outfile)
+write('file',$outfile,'Measured cross-peak volume integrals')
+write('file',$outfile,'Mixing time = %6.1f msec\n',1000*$mix)
+write('file',$outfile,'Index\tVolume')
+$i=1 $dum=0 $f1=0 $f2=0 $ampl=0 $volume=0
+repeat  
+  ll2d('info',$i):$dum,$f1,$f2,$ampl,$volume
+  write('file',$outfile,'%4d\t%6.3f',$i,$volume)        "and output"
+  $i=$i+1
+until $i>($numpeaks)
+cat($outfile)

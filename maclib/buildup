@@ -1,0 +1,61 @@
+"buildup - Calculate buildup curve time constant for specified peaks	"
+" usage: buildup(n), where n is the index of the cross-peak of interest "
+"        buidup with no arguments calculates the buildup curves for all "
+"        cross-peaks							"
+
+" from:	 Magn. Moments Vol. IV Nr. 2 p. 18				"
+"        to plot/display an individual buildup curve:			"
+"        (1) Run buildup(n)						"
+"	 (2) autoscale expl('file','analyze.out')                       "
+"            will display the curve			  		"
+"        (3) To plot the curve:  pexpl('file','analyze.out')		"
+
+"   94/03/14 - modified for VNMR 4.3, Adolf Gogoll,             "
+"              University of Uppsala, Sweden                    "
+
+shell('ls xpk.* | sort > /vnmr/tmp/filenames; cat')
+nrecords ('/vnmr/tmp/filenames'):$numtimes
+$numtimes=$numtimes-1   "last file is xpk.ref which is not desired"
+$filenames='' $i=1
+lookup('file','/vnmr/tmp/filenames')
+repeat	"for each filename"
+  lookup('read'):n1
+  $filenames[$i]=n1
+  $i=$i+1
+until $i>$numtimes
+rm('/vnmr/tmp/filenames')
+if $#<1 then 	"do all peaks"
+  nrecords('xpk.ref'):$numpeaks
+  $numpeaks=($numpeaks-6)/5
+  $start=1 $finish=$numpeaks
+else	"only do requested peak"
+  $start=$1 $finish=$1
+endif
+write('reset','buildup.summary')
+write('reset','buildup.rawdata')
+write('file','buildup.summary','Index	  f2 (ppm)  f1 (ppm)   Rate (sec)  error (sec)')
+$p=$start
+repeat		"for each peak"
+  $i=1
+  write('reset','analyze.inp')
+  write('file','analyze.inp','%d %d\n',1,$numtimes+1)
+  write('file','analyze.inp','%5.3f %6.3f',0.0000,0.0000)
+  repeat		"for each mixing time"
+    lookup('file',$filenames[$i])
+    lookup('seek','=','read'):$mix
+    lookup('seek','Volume','skip',($p-1)*2+1,'read'):$volume
+    write('file','analyze.inp','%5.3f %6.3f',$mix/1000,$volume)
+    $i=$i+1
+  until $i>$numtimes
+  lookup('file','xpk.ref')	"to look up frequencies for labelling"
+  lookup('seek','F2','Max.','skip',($p-1)*11+1)
+  lookup('read',2):$f2,$f1
+  write('reset','analyze.list')
+  write('file','analyze.list','Buildup curve for cross peak at f2=%5.2f, f1=%5.2f, ppm\n',$f2/sfrq,$f1/sfrq)
+  shell('expfit T1 list < analyze.inp >> analyze.list; cat')
+  shell('cat analyze.list >> buildup.rawdata')
+  lookup('file','analyze.list','seek','T1','skip',2,'read',2):$t1,$t1err
+  write('file','buildup.summary','%4d%11.2f%11.2f %11.3f  %11.3f',$p,$f2,$f1,$t1,$t1err)
+  $p=$p+1
+until $p>$finish
+cat('buildup.summary')
