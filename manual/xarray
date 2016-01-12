@@ -1,0 +1,23 @@
+*******************************************************************************
+  xarray	Allow easy entry of exponentially spaced values
+*******************************************************************************
+
+  Syntax:       xarray<('parametername'<,#steps,start,finalvalue>)>
+
+  Description:  "xarray" by itself enters an interactive mode in which you
+                are asked for the name of the parameter to be arrayed, the
+                number of values of the parameter, the first (starting) and
+		the last (final) value of the array.
+		Any numeric parameter can be arrayed using this macro, and
+		all values of the array created by the macro must satisfy
+		the limits of the parameter.
+                "xarray('parametername')" also enters an interactive mode but
+                doesn't ask for the parameter name, while providing all
+                information (parameter name, #steps, starting value, and
+                stepsize) bypasses the interactive mode completely.
+
+  Examples:     xarray
+                xarray('d2')
+                xarray('d2',10,0.1,10)
+		xarray('nt',10,2,1024)
+

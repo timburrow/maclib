@@ -1,0 +1,56 @@
+"******************************************************"
+" xarray - macro for easy setup of exponential arrays  "
+"******************************************************"
+" usage:  xarray                      interactive mode                     "
+"         xarray(parameter_name)      interactive, for specified parameter "
+"         xarray(parameter_name,steps,start,end)	                   "
+"         optional fifth argument avoids da				   "
+
+if ($#>1) and ($#<4) then
+   write('error','usage:  xarray<(parameter_name<,steps,start,multiplier>)>')
+   return(1)
+endif
+$par = ''
+if ($# > 0) then
+   $par=$1
+else
+   $par_in = ''
+   input('parameter to be arrayed: '):$par_in
+   substr($par_in,1):$par
+   if ($par = '') then
+      write('error','xarray cancelled')
+      return
+   endif
+endif
+{$par}={$par}[1]                    "If the parameter does not exist, exit"
+if $#=4 then
+   $steps=$2
+   $start=$3
+   $end=$4
+else
+   input('enter number of steps in array: '):$steps
+   input('enter starting value: '):$start
+   input('enter final value: '):$end
+endif
+$range=$end/$start
+if $range<0 then
+   write('error','xarray cannot change sign with exponential arrays')
+   return
+endif
+if $steps<2 then
+   write('error','xarray: at least two steps are required!')
+   return
+endif
+ln($range):$lnrange
+$step=$lnrange/($steps-1)
+exp($step):$mult
+gain='y'
+$count=1
+{$par}[1]=$start
+while $count<$steps do
+   $count=$count+1
+   {$par}[$count]={$par}[$count-1]*$mult
+endwhile
+if ($# <> 5) then
+   da
+endif
