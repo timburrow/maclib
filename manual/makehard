@@ -1,0 +1,16 @@
+*********************** VARIAN NMR USER GROUP LIBRARY ***********************
+
+makehard	Make a hard pulse shape with any number of steps
+
+Syntax:		makehard(#steps<,amplitude>)
+
+Description:	The output is a file in your personal shapelib named
+		  hard#steps.RF, e.g., hard256.RF.
+		If amplitude is omitted, it is assumed to be 1023
+		If amplitude is less than zero, the phase is changed to 180
+		If amplitude is between 0 and 1, this is taken as a fractional
+		  amplitude and multiplied by 1023
+
+Examples:	makehard(256)
+		makehard(64,-512)
+		makehard(1024,.25)
