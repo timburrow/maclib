@@ -1,0 +1,195 @@
+" @(#)zoomplot2d 8.1 2/5/93 Copyright (c) 1991,1992 Varian Assoc.,Inc. All Rights Reserved "
+"***************************************************"
+" zoomplot2d - 'zoomed' 2d plot (skipping 2d noise) "
+"***************************************************"
+" Usage: zoomplot2d<(levels<,spacing>)>		"
+"	 zoomplot2d('pos'<,levels<,spacing>>)	"
+"	 zoomplot2d('neg'<,levels<,spacing>>)	"
+
+"================="
+" check arguments "
+"================="
+if $#<1 then
+  $pos=''
+  $levels=7
+  $spacing=2
+else
+  $t1=typeof('$1')
+  if $t1=1 then
+    $pos=$1
+    $ix=2
+  else
+    $ix=1
+  endif
+  if $#>=$ix then
+    $levels=${$ix}
+  else
+    $levels=7
+  endif
+  $ix=1+$ix
+  if $#>=$ix then
+    $spacing=${$ix} 
+  else    
+    $spacing=2 
+  endif
+endif
+if dmg='av' then $pos='' endif
+    
+"================================="
+" set chart and global parameters "
+"================================="
+$graph=''
+graphis:$graph
+s9 $axis=axis f
+$sc=2 $wc=wcmax-25-$sc
+$sc2=0 $wc2=wc2max-$sc2-2
+if $wc>$wc2 then
+  $wc=$wc2
+else
+  $wc2=$wc
+endif
+$rflrfp=rfl-rfp
+
+"=================="
+" check conditions "
+"=================="
+numreg:$regions
+if $regions<1 then
+  write('error','zoomplot2d: need to define regions (in f2) first!')
+  return
+endif
+if sw<>sw1 then
+  write('error','zoomplot2d: only implemented for homo-correlated 2D spectra.')
+  return
+endif
+
+"========================================================================"
+" check all integral regions, extract those which are within 2D spectrum "
+"========================================================================"
+$ix=1 $i=1 $reg=0 $wpsum=0
+while ($ix<=$regions) do
+  if lifrq[2*($ix-1)+1]-$rflrfp<sp then
+    if lifrq[2*($ix-1)+2]-$rflrfp>sp then
+      $reg[$i]=sp
+      $i=1+$i
+      if lifrq[2*($ix-1)+2]-$rflrfp<sp+wp then
+        $reg[$i]=lifrq[2*($ix-1)+2]-$rflrfp
+      else
+        $reg[$i]=sp+wp
+      endif
+      $wpsum=$wpsum+$reg[$i-1]-$reg[$i]
+      $i=1+$i
+    endif
+  else
+    if lifrq[2*($ix-1)+1]-$rflrfp<sp+wp then
+      $reg[$i]=lifrq[2*($ix-1)+1]-$rflrfp
+      $i=1+$i
+      if lifrq[2*($ix-1)+2]-$rflrfp<sp+wp then
+        $reg[$i]=lifrq[2*($ix-1)+2]-$rflrfp
+      else
+        $reg[$i]=sp+wp
+      endif
+      $wpsum=$wpsum+$reg[$i-1]-$reg[$i]
+      $i=1+$i
+    endif
+  endif
+  $ix=1+$ix
+endwhile
+
+"============================================================="
+" calculate number of signal regions within the 2D spectrum,  "
+" evaluate expansion rate from the total width of all regions "
+"============================================================="
+$plotreg=($i-1)/2
+$expand=$wpsum/$wc
+
+"========================================================="
+" plot all potential signal areas:			  "
+" start at lower left, then do all the rectangles in rows "
+"========================================================="
+$i=1
+sc2=$sc2
+repeat
+
+  " calculate height (Hz and mm) of the current row "
+  if trace='f1' then
+    sp=$reg[2*($i-1)+2]
+    wp=$reg[2*($i-1)+1]-sp
+    wc2=wp/$expand
+    wp=$expand*wc2
+  else
+    sp1=$reg[2*($i-1)+2]
+    wp1=$reg[2*($i-1)+1]-sp1
+    wc2=wp1/$expand
+    wp1=$expand*wc2
+  endif
+
+  " start at left end of each row "
+  sc=$sc+$wc
+
+  " plot all rectangles in a row "
+  $j=1
+  repeat
+
+    " determine which axis to plot (if any) "
+    if $i=1 then	" left end of plot, do left scale "
+      if $j=1 then	" lower left corner: both axes "
+        axis='pp'
+      else		" above lower left corner: only left scale "
+        if trace='f1' then
+          axis='np'
+        else
+          axis='pn'
+        endif
+      endif
+    else		" not at left end: no left side scale "
+      if $j=1 then 	" bottom row: do bottom scale "
+        if trace='f1' then
+          axis='pn'
+        else 
+          axis='np'
+        endif 
+      else		" 'inner' rectangles: no scale "
+        axis='nn'
+      endif
+    endif
+
+    " calculate width (Hz and mm) of the current rectangle "
+    if trace='f1' then
+      sp1=$reg[2*($j-1)+2]
+      wp1=$reg[2*($j-1)+1]-sp1
+      wc=wp1/$expand
+      wp1=wc*$expand
+    else
+      sp=$reg[2*($j-1)+2]
+      wp=$reg[2*($j-1)+1]-sp
+      wc=wp/$expand
+      wp=wc*$expand
+    endif
+
+    " positioning rectangle, do the plot "
+    sc=sc-wc
+    if $pos='' then
+      pcon($levels,$spacing)
+    else
+      pcon($pos,$levels,$spacing)
+    endif
+
+    " next rectangle "
+    $j=$j+1
+  until $j>$plotreg
+
+  " positioning next row "
+  sc2=sc2+wc2
+
+  " next row "
+  $i=1+$i
+until $i>$plotreg
+
+"====================================================="
+" switch bach to previous display, reactivate display "
+"====================================================="
+r9 axis=$axis
+if ($graph='dcon')or($graph='dpcon')or($graph='dconi') then
+  dconi('restart')
+endif

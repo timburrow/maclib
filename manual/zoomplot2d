@@ -1,0 +1,51 @@
+*******************************************************************************
+  zoomplot2d - "zoomed" 2D plot (skipping 2D noise)		      (macro)
+*******************************************************************************
+
+  Syntax:       zoomplot2d<(levels<,spacing>)>
+		zoomplot2d('pos'<,levels<,spacing>>)
+		zoomplot2d('neg'<,levels<,spacing>>)
+
+  Description:  very often an overview 2D plot (cosy, noesy) contains vast
+		areas where there is only noise, and where also theoretically
+		no cross- or diagonal peak can appear. "zoomplot2d" will
+		create a full size 2D plot where the noise is left out, and
+		the areas which can have signals are blown up accordingly.
+		All signals are expanded by the same ratio, which depends on
+		the amount of signal-free areas in the spectrum.
+
+		The information where signals can be is taken from the
+		integration reset points in f2. The best solution is, to
+		set these reset points in the setup spectrum (integrate all
+		signals with pltmod='partial'). If this step was omitted,
+		transform an f2 trace with all signals ('wft(1)' for noesy,
+		'wft(ni)' for dqcosy spectra) and set the integration reset
+		points (again with pltmod='partial'). Avoid too many integral
+		regions, and don't make them too narrow.
+		[ Integration reset can also be set from within dconi: switch
+		to trace='f2', type 'cz' and use the cursor in dconi and the
+		command 'z' to set the reset points one by one. Disadvantage:
+		you can't see the integrals, and typing 'z' is more unhandy
+		than using a function key within 'ds'. ]
+
+		"zoomplot2d" will create a square-shaped plot as big as
+		possible; no 1D traces are provided. By default it will
+		draw seven contours at a spacing of 2. Arguments (optional):
+		  - 'pos': only draw positive contours
+		  - 'neg': only draw negative contours
+		  - levels: the number of contour levels (default:7)
+		  - spacing: the spacing of the contour levels (default: 2)
+
+		Typically "zoomplot2d" will be used on overview spectra
+		(full spectrum on display), but it also works for symmetric
+		expansions (sp=sp1, wp=wp1). "zoomplot2d" currently only
+		works for cosy/noesy-type spectra (sw=sw1) [ In theory the
+		same algorithm could also be applied to heteronuclear
+		correlations ].
+
+  Example:	zoomplot2d
+		zoomplot2d('pos')
+		zoomplot2d('neg')
+		zoomplot2d(12)
+		zoomplot2d(12,1.3)
+		zoomplot2d('neg',12,1.5)
