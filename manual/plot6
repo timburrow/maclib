@@ -1,0 +1,19 @@
+************************ VARIAN NMR USER GROUP LIBRARY ************************
+
+plot6    displays and plots 3d planes, 6 at a time 
+
+ Syntax: plot6(startplane#,endplane#,<'pos' or 'neg'>,<levels>,<spacing>,<dc2d>)
+
+ Description: This macro will produce a series of plots showing 6 planes
+              at a time. The axes are correct and a line above each 2D plane
+              indicates the plane # in the other dimension, the nucleus for
+              that dimension and its chemical shift. This macro is based on 
+              the plplanes macro. DC correction  using dc2d('f1') or dc2d('f2')
+              is done optionally .
+
+              "page" is automatically done at the end
+
+              Display of similar sized plots is done 4 at a time using the`
+              macro "stack4"
+
+ Examples:    plot6(1,64,'pos',12,1.3)
