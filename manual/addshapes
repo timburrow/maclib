@@ -1,0 +1,21 @@
+************************ VARIAN NMR USER GROUP LIBRARY ************************
+
+addshapes   Add two waveform shapes to form a new, composite shape
+
+ Syntax: addshapes('shape1',mult1,phase1,'shape2',mult2,phase2,'output')
+            where: shape1, shape2 are the names of existing .RF shapes in
+                     shapelib which do NOT contain any comments
+                   mult1, mult2 are multipliers to weight that particular shape
+                   phase1, phase2 are phase shifts for that particular shape
+                   output is the name of a new file in shapelib
+
+ Description: Two .RF shapes in shapelib are added vectorially, with optional
+   independent weighting factors and phase shifts and placed into a new shape.
+   If the two shapes are not the same number of steps, the resulting shape is
+   as long as the longer of the two shapes, with the two shapes centered.
+   The output is normalized by two, so if the weighting factors (mult1 and
+   mult2) are each 1.0, the power must be increased by 6 dB (or the pulse
+   lengthened by a factor of 2) compared to a single shape to keep the
+   effective pulse width the same.
+
+ Examples: addshapes('gauss',1.0,0.0,'sinc',0.5,90.0,'sum')

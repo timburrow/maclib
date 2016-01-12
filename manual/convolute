@@ -1,0 +1,23 @@
+************************ VARIAN NMR USER GROUP LIBRARY *************************
+                               NEW MANUAL ENTRY
+
+convolute            Convolute a waveform shape with n frequencies
+
+             Syntax: convolute('rawshape','newshape',width,freq1,freq2,...freqn)
+
+        Description: Takes a shape in the user's shapelib, convolutes it with
+                     one or more frequencies to generate a Shifted Laminar
+                     Pulse (S.L.Patt, J. Magn. Reson., in press), and writes
+                     the new shape into a new shape file. The width of the
+                     pulse is entered in usec and is most conveniently entered
+                     as the name of a parameter, e.g., pw. Frequencies can be
+                     either positive or negative.
+
+                     No check is made by the macro to see that the frequencies
+                     entered satisfy the Nyquist limit, i.e., that the phase
+                     change per step is less than 180 degrees.The macro also
+                     assumes that any comment lines contained in the shape file
+                     are found at the beginning of the file.
+
+           Examples: convolute('gauss','newgauss',pw,500)
+                     convolute('gauss','offsetgauss',1000,100,300,-200)
