@@ -1,0 +1,17 @@
+*********************** VARIAN NMR USER GROUP LIBRARY ***********************
+                              NEW MANUAL ENTRY
+
+set_vt		Change the temperature in a "safe" manner
+
+Syntax:		set_vt [Interactive mode, asks for temperature]
+		set_vt(Desired temperature)
+		set_vt('n') or set_vt('off')
+
+Description:	set_vt activates the temperature controller, changes the
+		temperature, and then deactivates the temperature controller
+		so that no inadvertant changes to the temperature will occur.
+		The user is asked for one or more confirmations of the
+		requested action. Note that this method of changing the
+		temperature is NOT compatible with running multiple experiments
+		at different temperatures under computer control (nor with
+		a temperature array)

@@ -1,0 +1,40 @@
+"set_vt - Set temperature of VT unit in a 'safe' manner"
+"                             S.L.Patt, 9 March 1995"
+
+"Read temperature from input argument or interactively"
+  if $#<1 then
+    input('Input desired temperature: '):$temp
+  else
+    if typeof('$1')<>0 then "A string was input"
+      if ($1='n') or ($1='off') then
+        vttype=2 temp='n' su vttype=0
+        write('error','Temperature control deactivated')
+        return
+      else
+        write('error','The only acceptable string argument is \'n\' or \'off\'')
+        return
+      endif
+    else
+      $temp=$1
+    endif
+  endif
+
+"Make into a string for use in messages"
+  $tempstring=''
+  format($temp,0,0):$tempstring
+
+"Now confirm user's intentions"
+  confirm('Please confirm that you want to change the temperature to '+$tempstring+' degrees at this time.'):$response
+  if $response=0 then write('error','Temperature unchanged.') return endif
+  echo('-n','') "Workaround to confirm bug"
+  if ($temp<0) or ($temp>50) then "Change the 0 and 50 if you wish"
+    confirm('Temperature out of normal range. Are you SURE you want to set the temperature to '+$tempstring+' degrees?'):$response
+    if $response=0 then write('error','Temperature unchanged.') return endif
+  endif
+
+"If OK, go ahead and change temperature"
+  vttype=2  "Indicate VT is present"
+  temp=$temp
+  su
+  vttype=0  "Deactivate VT so no inadvertant change can be made"
+  write('error','Temperature is now changing to %f5.1',temp)
