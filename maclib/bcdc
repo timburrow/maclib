@@ -1,0 +1,202 @@
+" @(#)bcdc 8.1 2/5/93 Copyright (c) 1991,1992 Varian Assoc.,Inc. All Rights Reserved "
+" ****************** "
+" *** macro bcdc *** "
+" ****************** "
+
+" Usage:  bcdc<(basepoints<,mingap<,overlap<,offset>>>)>		"
+
+" Description:								"
+"    does linear drift correction over groups of integral regions	"
+"	and noise regions using the bc command.				"
+
+" Arguments:								"
+"    basepoints defaults to 32; this governs the number of points	"
+"	that is averaged, as well as the minimum size of an integral	"
+"	gap that is taken into account for the baseline correction.	"
+"    mingap is the minimum size of an integral gap; by default this	"
+"	value is equal to basepoints, which is also the minimum size	"
+"	for this parameter.						"
+"    overlap is the number of points by which the noise regions over-	"
+"	lap with the integrated regions; this parameter defaults to 0,	"
+"	which is in accordance with the Varian philosophy of not using	"
+"	integrated parts of the spectrum for baseline correction.	"
+"    offset is an additional offset of the noise regions for bc only:	"
+"	this is useful if for statistical reasons the reset points	"
+"	should be shifted, to get several independent baseline correc-	"
+"	tions (and integration values) from the same spectrum. This	"
+"	allows to separate error contributions due to bc. Default is 0.	"
+"    mingap, overlap and offset are in data points, NOT IN HZ.		"
+"    while overlap always moves the noise regions for bc INTO the	"
+"	integrals, offset has an absolute direction: offset>0 shifts	"
+"	all noise sections for bc to the left. The two parameters can	"
+"	be used independently.						"
+
+" started	 9jul92  r.kyburz					"
+" finished	10jul92  r.kyburz					"
+" modified	11aug92  r.kyburz (fixed bugs with offset/overlap)	"
+
+
+" determine current display status "
+graphis:$ds
+substr($ds,1,2):$ds
+
+" set defaults "
+$basepoints=32
+$subsections=1	" >1 would split noise regions into subregions "
+$mingap=$basepoints
+$overlap=0
+$offset=0
+
+" check for arguments "
+if $#>0 then
+  if $1>8 then
+    $basepoints=$1
+  endif
+  if $#>1 then
+    if $2>$basepoints then
+      $mingap=$2
+    endif
+    if $#>2 then
+      if $3>0 then
+	$overlap=$3
+	if $overlap>$basepoints/2 then
+	  $overlap=$basepoints/2
+        endif
+      endif
+      if $#>3 then
+        $offset=$4
+      endif
+    endif
+  endif
+endif
+
+" calculate widths in Hz units "
+$hzperpoint=sw/(fn/2)
+$noisewidth=$hzperpoint*$basepoints
+$mingap=$hzperpoint*$mingap
+$overlap=$hzperpoint*$overlap
+$offset=$hzperpoint*$offset
+
+" global constants and settings "
+$rflrfp=rfl-rfp
+lifrq='y'
+
+" store integral reset points in local variable "
+$resets=0
+numreg:$numreg
+$resets=lifrq
+
+" eliminate present integral reset points "
+cz
+
+" create a noise region at the left end of the spectrum "
+z(sw-$noisewidth-$rflrfp)
+$noiseregs=1
+
+" create a noise region to the left of the first integral "
+if sw-$resets[1]>2*$noisewidth-$overlap+$offset then
+  $edge=$resets[1]-$rflrfp-$overlap+$offset
+  z($edge+$noisewidth,$edge)
+  $noiseregs=$noiseregs+1
+endif
+
+" check for gaps between integrals that are large enough to be regarded	"
+"    as a noise region, and create either a single noise region (for	"
+"    small gaps), or a noise region at both ends of the gap (for big	"
+"    gaps).								"
+$ix=1
+repeat
+  $lgap=$resets[2*$ix]-$rflrfp
+  $rgap=$resets[2*$ix+1]-$rflrfp
+  $gap=$lgap-$rgap
+  " only pick gaps that are at least the size of a noise region "
+  if $gap>$mingap then
+    " for gap wider than two noise regions, create two noise regions "
+    if $gap>2*$noisewidth-2*$overlap then
+      z($lgap+$overlap+$offset,$lgap-$noisewidth+$overlap+$offset)
+      z($rgap+$noisewidth-$overlap+$offset,$rgap-$overlap+$offset)
+      $noiseregs=$noiseregs+2
+    else  " otherwise just create a noise region as big as the gap "
+      z($lgap+$overlap+$offset,$rgap-$overlap+$offset)
+      $noiseregs=$noiseregs+1
+    endif
+  endif
+  $ix=$ix+1
+until $ix=$numreg
+
+" create a noise region to the right of the last integral region "
+if $resets[2*$numreg]>2*$noisewidth-$overlap+$offset then
+  $edge=$resets[2*$numreg]-$rflrfp+$overlap+$offset
+  z($edge,$edge-$noisewidth)
+  $noiseregs=$noiseregs+1
+endif
+
+" create a noise region at the right end of the spectrum "
+z($noisewidth-$rflrfp)
+$noiseregs=$noiseregs+1
+
+" number of averages the bc command will calculate "
+$averages=$noiseregs*$subsections
+
+"***********************************************************************"
+" workaround for bc limitation, which seems to refuse to calculate	"
+"    less than 13 averages (should be $arg1+1 !)			"
+"while ($averages<13) and (lifrq[1]>lifrq[2]+$noisewidth) do		"
+"  lifrq[1]=lifrq[1]-$noisewidth					"
+"  $averages=$averages+$subsections					"
+"endwhile								"
+"$prelast=2*$noiseregs-2						"
+"while ($averages<13) and (lifrq[$prelast]<lifrq[$prelast-1]-$noisewidth) do "
+"  lifrq[$prelast]=lifrq[$prelast]+$noisewidth				"
+"  $averages=$averages+$subsections					"
+"endwhile								"
+"***********************************************************************"
+
+" switch to partial integration mode, do a multilinear (1st order	"
+"    spline) baseline correction; this will do linear interpolation	"
+"    between averaged noise regions.					"
+$intmod=intmod
+intmod='partial'
+bc(1,$averages,$basepoints/$subsections,$subsections)
+
+" if in 'ds' mode, switch to 'dss' mode and mark noise sections on display "
+if $ds='ds' then
+  $ix=1
+  intmod='off'
+  dss
+  while ($ix<$noiseregs)and(lifrq[2*$ix+1]-$rflrfp>sp+wp) do
+    $ix=1+$ix
+  endwhile
+  while ($ix<$noiseregs-1)and(lifrq[2*$ix]-$rflrfp>sp) do
+    $lpos=lifrq[2*$ix]-$rflrfp
+    if $lpos>sp+wp then
+      $lpos=sp+wp
+    endif
+    $rpos=lifrq[2*$ix+1]-$rflrfp
+    if $rpos<sp then 
+      $rpos=sp 
+    endif
+    $lpos=wcmax-sc-($lpos-sp)/wp*wc
+    $rpos=wcmax-sc-($rpos-sp)/wp*wc
+    pen('graphics','yellow')
+    move($lpos,sc2+vp+10)
+    draw($lpos,sc2+vp)
+    draw($rpos,sc2+vp)
+    draw($rpos,sc2+vp-10)
+    $ix=$ix+1
+  endwhile
+endif
+intmod=$intmod
+
+" reinstall the original reset points "
+cz
+$ix=1
+repeat
+  z($resets[$ix]-$rflrfp)
+  $ix=$ix+1
+until $ix>2*$numreg
+
+if $ds='ds' then
+  dssn('int')
+  menu('display_1D')
+endif

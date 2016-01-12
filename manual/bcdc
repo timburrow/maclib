@@ -1,0 +1,62 @@
+
+*******************************************************************************
+ bcdc	- restricted baseline correction	                       (macro)
+*******************************************************************************
+
+       Syntax:  bcdc<(basepoints<,mingap<,overlap<,offset>>>)>
+
+  Description:  This macro can be described as "restricted bc", or "automatic
+		drift correction over groups of integral regions and large
+		noise areas". It was designed to compensate for some of the
+		deficiencies of "bc" (and "dc"), such as the tendency of "bc"
+		to flatten out broad spectral features "without warning". The
+		primary target with this command was better integral
+		reproducibility, and more accurate control over the way in
+		which the baseline is flattened.
+		"bcdc" finds noise areas (odd integral regions) that are at
+		least 'mingap' points wide. Depending on the size of such a
+		noise area it will either create a single noise area of a
+		width of 'basepoints' points. For larger noise areas it will
+		define two such noise areas ('basepoints' wide). One such
+		noise area will also be defined at both ends of the spectrum.
+		A multi- linear (first order spline) baseline correction is
+		then performed, taking each of the noise areas as a single
+		baseline "point" ("bc" averages over the 'basepoints' values).
+		At the end of the macro, the original integral reset points
+		are installed again.
+		For reasons of compatibility with the way other manufacturers
+		do baseline corrections, the parameter 'overlap' allows for
+		the noise areas to overlap with integrated areas of the
+		spectrum (see below).
+		To get more information on the statistical relevance of the
+		integral areas, the baseline points (except for those at the
+		ends of the spectrum) can also be offset in both directions
+		(see below).
+	        "bcdc" was written in cooperation with / based on suggestions
+                by Cornelius de Korte, Solvay Pharmaceuticals, Weesp NL.
+
+    Arguments:  "basepoints" defaults to 32; this governs the number of points
+		   that is averaged, as well as the minimum size of an
+		   integral gap that is taken into account for the baseline
+		   correction.
+		"mingap" is the minimum size of an integral gap; by default
+		   this value is equal to basepoints, which is also the
+		   minimum size for this parameter.
+		"overlap" is the number of points by which the noise regions
+		   overlap with the integrated regions; this parameter
+		   defaults to 0, which is in accordance with the Varian
+		   philosophy of not using integrated parts of the spectrum
+		   for baseline correction.
+		"offset" is an additional offset of the noise regions for "bc"
+		   only. This is useful if for statistical reasons the reset
+		   points should be shifted, to get several independent
+		   baseline corrections (and integration values) from the same
+		   spectrum. This allows to separate error contributions due
+		   to "bc". Default is 0.
+		"mingap", "overlap" and "offset" are in data points, NOT IN
+		HZ. While "overlap" always moves the noise regions for "bc"
+		INTO the integrals, "offset" has an absolute direction:
+		"offset>0" shifts all noise sections for "bc" to the left. The
+		two parameters can be used independently.
+
+      Related:  dc, bc
