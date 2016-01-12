@@ -1,0 +1,173 @@
+"***********************************************************************"
+"dsvpl - displays vertical plane at the cursor position                 "
+"        features : works with all three orthogonal planes              "
+"                    irrespective of what the trace parameter is.       "
+"                   displays the chemical shift of the plane index.     "
+"                   if getplane had not been done for the new plane     "
+                     macro will enquire if you want to do getplane.     "
+"***********************************************************************"
+
+$i = 1
+$axval = ''
+$f1nuc = ''
+$f2nuc = ''
+$f3nuc = ''
+$tmpnuc = ''
+
+repeat
+  substr(axis,$i,1):$axval
+  if ($axval = 'd') then
+    $tmpnuc = dn
+    decfrq:$tmpnucfrq
+  else
+    if ($axval = 'e') then
+     $tmpnuc = dn2
+     dec2frq:$tmpnucfrq
+    else
+     $tmpnuc = tn
+     spcfrq:$tmpnucfrq
+    endif
+  endif
+
+  if ($i = 1) then
+    $f3nuc = $tmpnuc
+    $f3nucfrq = $tmpnucfrq
+  else
+   if ($i = 2) then
+     $f1nuc = $tmpnuc
+     $f1nucfrq = $tmpnucfrq
+   else
+     if ($i = 3) then
+      $f2nuc = $tmpnuc
+      $f2nucfrq = $tmpnucfrq
+     endif
+   endif
+  endif
+
+   $i = $i + 1
+until ($i > 3)
+
+$Vplane=''
+$Vnucleus=''
+
+ $abscr = sw - (cr + rfl - rfp)
+ $abscr1 = sw1 - (cr1 + rfl1 - rfp1)
+ $abscr2 = sw2 - (cr2 + rfl2 - rfp2)
+ $plinc = sw*2/fn
+ $plinc1 = sw1*2/fn1
+ $plinc2 = sw2*2/fn2
+ $newplane = ''
+
+if ((plane = 'f2f3') or (plane = 'f3f2')) then
+ if (trace = 'f2') then
+  $Vplane = 'F2'
+  $Vnucleus = $f2nuc
+  $Vchemshift = cr2/$f2nucfrq
+  $plnumber = $abscr2/$plinc2 + 1
+  $newplane = 'f1f3'
+  exists(path3d+'/extr/dataf1f3.proj','file'):$fileexist
+  if ($fileexist = 0) then
+   input('f1f3 planes do not exist. Do you want to run getplane (y or n)?'):$a
+   if ($a = 'y') then
+    getplane('f1f3')
+   else
+    write('error','macro aborted')
+    return(0)
+   endif
+  endif
+ else
+  $Vplane = 'F3'
+  $Vnucleus = $f3nuc
+  $Vchemshift = cr/$f3nucfrq
+  $plnumber = $abscr/$plinc + 1
+  $newplane = 'f1f2'
+  exists(path3d+'/extr/dataf1f2.proj','file'):$fileexist
+  if ($fileexist = 0) then
+   input('f1f2 planes do not exist. Do you want to run getplane (y or n)?'):$a
+   if ($a = 'y') then 
+    getplane('f1f2') 
+   else  
+    write('error','macro aborted') 
+    return(0) 
+   endif    
+  endif
+ endif
+endif
+
+
+if ((plane = 'f1f3') or (plane = 'f3f1')) then
+ if (trace = 'f1') then
+  $Vplane = 'F1'
+  $Vnucleus = $f1nuc
+  $Vchemshift = cr1/$f1nucfrq
+  $plnumber = $abscr1/$plinc1 + 1
+  $newplane = 'f2f3'
+  exists(path3d+'/extr/dataf2f3.proj','file'):$fileexist
+  if ($fileexist = 0) then    
+   input('f2f3 planes do not exist. Do you want to run getplane (y or n)?'):$a 
+   if ($a = 'y') then 
+    getplane('f2f3') 
+   else   
+    write('error','macro aborted') 
+    return(0)    
+   endif     
+  endif
+ else
+  $Vplane = 'F3' 
+  $Vnucleus = $f3nuc 
+  $Vchemshift = cr/$f3nucfrq
+  $plnumber = $abscr/$plinc + 1
+  $newplane = 'f1f2'
+  exists(path3d+'/extr/dataf1f2.proj','file'):$fileexist 
+  if ($fileexist = 0) then     
+   input('f1f2 planes do not exist. Do you want to run getplane (y or n)?'):$a  
+   if ($a = 'y') then  
+    getplane('f1f2') 
+   else    
+    write('error','macro aborted')  
+    return(0)     
+   endif        
+  endif
+ endif
+endif
+
+if ((plane = 'f1f2') or (plane = 'f2f1')) then
+ if (trace = 'f1') then 
+  $Vplane = 'F1'  
+  $Vnucleus = $f1nuc 
+  $Vchemshift = cr1/$f1nucfrq
+  $plnumber = $abscr1/$plinc1 + 1
+  $newplane = 'f2f3'
+  exists(path3d+'/extr/dataf2f3.proj','file'):$fileexist  
+  if ($fileexist = 0) then      
+   input('f2f3 planes do not exist. Do you want to run getplane (y or n)?'):$a 
+   if ($a = 'y') then   
+    getplane('f2f3')  
+   else     
+    write('error','macro aborted')  
+    return(0)      
+   endif         
+  endif
+ else
+  $Vplane = 'F2'
+  $Vnucleus = $f2nuc
+  $Vchemshift = cr2/$f2nucfrq
+  $plnumber = $abscr2/$plinc2 + 1
+  $newplane = 'f1f3'
+  exists(path3d+'/extr/dataf1f3.proj','file'):$fileexist   
+  if ($fileexist = 0) then       
+   input('f1f3 planes do not exist. Do you want to run getplane (y or n)?'):$a 
+   if ($a = 'y') then    
+    getplane('f1f3')   
+   else     
+    write('error','macro aborted')   
+    return(0)       
+   endif          
+  endif
+ endif
+endif
+
+select($newplane,$plnumber)
+  dconi
+
+write('graphics',10,wc2max-10,'Plane chemical shift along %s - %s - axis : %3.1f ppm',$Vplane, $Vnucleus, $Vchemshift)
