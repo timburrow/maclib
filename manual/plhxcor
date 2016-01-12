@@ -1,0 +1,88 @@
+*******************************************************************************
+  plhxcor   - plot X,H-correlation 2D spectrum	(M)
+*******************************************************************************
+
+  Syntax:	plhxcor<(levels<,spacing<,exp1D_H<,exp1D_X>>>)>
+		plhxcor(sign<,mult1H>,<,levels<,spacing<,exp1D_H<,exp1D_X>>>>)
+		plhxcor(mult1H<,sign><,levels<,spacing<,exp1D_H<,exp1D_X>>>>)
+
+  Description:	"plhxcor" automatically plots 2D spectra of type hetcor, coloc,
+		hmqc, hmbc (direct and indirect detection). Features:
+		  - it keeps the orientation (f1, f2) of the spectrum on the
+		    screen
+		  - the plot area is optimized
+		  - number of contour levels and their spacing can be selected
+		  - negative or positive contours can be suppressed
+		  - 1D proton and X traces can be plotted along both axes;
+		    such 1D traces are taken from full (or reduced) 1D spectra
+		    in other experiments
+		  - it also works correctly for expansions
+		  - the 1D traces can be suppressed, which allows it to use
+		    a larger area for the 2D spectrum
+		  - the 1D spectra can be in any experiment
+		In multi-experiment mode, for the first plot the experiments
+                with the 1D spectra should be specified (at least if they are
+                not in exp1 and exp2). From then on, the 1D spectra will be
+		stored WITHIN the experiment with the 2D spectrum, which allows
+                much faster switching between the spectra and also frees
+                the other (1D) experiments for other tasks. Because of this
+                "internal storage" the "exp1D_H" and "exp1D_X" arguments are
+		not required for subsequent plots.
+                The command supports positive-only or negative-only contour
+                plots. The 1D traces (if available / requested) are automatically
+                scaled in order to fit the available space; if this results in
+                an underscaled 1H trace, "vs" for this trace can be multiplied
+		(from the automatic scaling) by 2, 5, 10, 20, 50, or 100.
+
+		Arguments:
+		  - levels: the number of contour levels; default: 7 contours.
+		  - spacing: the spacing between the contours; default: 2.
+		  - exp1D_H: the experiment in which the proton 1D spectrum
+		    resides; this can be a full 1D spectrum, but the referen-
+		    cing must be the same as for the 2D (see below). A nega-
+		    tive number will suppress the proton trace. Default is
+		    1 (exp1).
+		  - exp1D_X: the experiment in which the "X" 1D spectrum
+		    resides (see above); again, a negative number suppresses
+		    the "X: trace. Default: 2 (exp2).
+              The command supports two optional string arguments; these can be
+              used in any order, but must be specified prior to the numeric
+              arguments mentioned above:
+              sign - 'pos' = only plot positive contours
+                     'neg' = only plot negative contours
+              mult1H - 'x2' = multiplies vertical scale of 1H trace by 2
+                       'x5' = multiplies vertical scale of 1H trace by 5
+                       'x10' = multiplies vertical scale of 1H trace by 10
+                       'x20' = multiplies vertical scale of 1H trace by 20
+                       'x50' = multiplies vertical scale of 1H trace by 50
+                       'x100' = multiplies vertical scale of 1H trace by 100
+
+  Examples:	plhxcor			( equivalent to "plhxcor(7,2,1,2)" )
+		plhxcor(12,1.5)		( equivalent to "plhxcor(12,1.5,1,2)" )
+		plhxcor(7,2,3)		( equivalent to "plhxcor(7,2,3,2)" )
+		plhxcor(7,2,1,3)
+		plhxcor('pos',7,2,-1,3)
+		plhxcor(7,2,-1,-1)
+		plhxcor('neg')
+		plhxcor('neg','x10')
+		plhxcor('x5','pos',12,1.5)
+
+
+  Usage:	A typical sequence of actions for acquiring and plotting a
+		hetcor spectrum stepwise and in multiexperiment mode will be
+	        as follows:
+		  - acquire a proton spectrum in exp1
+		  - enter the text and reference the spectrum NOW (before
+		    moving the fid to an other experiment)
+		  - acquire a C13 spectrum in exp2
+		  - reference the spectrum NOW (again, before moving the fid
+		    into an other experiment) and fetch the text from exp1
+		    [ mt(1,2) ].
+		  - mf(1,3) jexp3 wft ... movesw
+		  - mf(2,4) jexp4 wft ... movesw
+		  - call the macro for the 2D experiment (e.g., "hetcor") and
+		    acquire the 2D spectrum
+		  - process the 2D spectrum
+		  - for plotting with traces type "plhxcor" (the defaults fit).
+		  - for expansions select the expansion and type "plhxcor"
+		    again.

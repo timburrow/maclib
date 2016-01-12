@@ -1,0 +1,337 @@
+" @(#)plcosy 9.3 10/12/94 Copyright (c) 1991,1993 Varian Assoc.,Inc. All Rights Reserved "
+"******************************************************************"
+" plcosy - plotting of cosy with 1d plots along edges		   "
+"******************************************************************"
+" 1st argument - # of levels (default 7)			   "
+" 2nd argument - spacing (default 2)				   "
+" 3rd argument - optional experiment number for 1d proton spectrum "
+"		 negative numbers suppress 1D plots		   "
+" Works for full cosy and all expansions			   "
+" Also works with 19F- and 31P- and other cosy-type spectra	   "
+" Optional string arguments (to be used PRIOR to any numeric args):"
+"	 'pos', 'neg': for positive / negative contours only       "
+"        'x2', 'x5', 'x10', 'x20', 'x50', 'x100': multiplies 'vs'  "
+"		in both 1D traces with 2, 5, 10, 20, 50, 100	   "
+"                                                                  "
+" 1999-02-07 - allows for 1D traces acquired at different frequency"
+" 2001-05-29 - added 'x2', 'x5', etc. multipliers for 1D traces;   "
+"              use vsadjp, vsadjf, etc., if found		   "
+"******************************************************************"
+
+" make sure plcosy is not called during acquisition! "
+jexp:$curexp
+expactive($curexp):$acq
+if $acq > 0 then
+  write('error','Acquisition in progress - cannot use %s',$0)
+  abort
+endif
+
+" determine parameter style "
+exists('parstyle','parameter'):$e
+if not($e) then
+  exists('parstyle','parameter','global'):$e
+endif
+if $e then
+  $parcmd = parstyle
+else
+  $parcmd = 'ppa' 	" parameter style (can be '', 'ppa', 'bpa', 'pap') "
+endif
+
+" global / default settings "
+$Hexpno = 1	" experiment number for H1 spectrum (default: 1) "
+$fetch1d = 0	" flag for fetching H1 data from an other experiment "
+$do1d = 1	" flag for 1D traces "
+$pos = ''	" 'pos' or 'neg' (or ''), for phase-sensitive NMR "
+$file1d = curexp+'/subexp/'+tn
+$file1da = autodir+'/tempH.fid'
+$levels = 7
+$spacing = 2
+$mult1d = 1
+
+" deal with arguments "
+if $# > 0 then			" check for arguments "
+  $ix = 1
+  if typeof('$1') then		" arg 1 is string "
+    if ($1 = 'pos') or ($1 = 'neg') then
+      $pos = $1
+    elseif ($1 = 'x2') then
+      $mult1d = 2
+    elseif ($1 = 'x5') then
+      $mult1d = 5
+    elseif ($1 = 'x10') then
+      $mult1d = 10
+    elseif ($1 = 'x20') then
+      $mult1d = 20
+    elseif ($1 = 'x50') then
+      $mult1d = 50
+    elseif ($1 = 'x100') then
+      $mult1d = 100
+    endif
+    $ix = 2
+    if $# > 1 then
+      " check whether arg2 (if present) is also string "
+      if typeof('$2') then 	" arg 2 is string "
+        if ($2 = 'pos') or ($2 = 'neg') then
+          $pos = $2
+        elseif ($2 = 'x2') then
+          $mult1d = 2
+        elseif ($2 = 'x5') then
+          $mult1d = 5
+        elseif ($2 = 'x10') then
+          $mult1d = 10
+        elseif ($2 = 'x20') then
+          $mult1d = 20 
+        elseif ($2 = 'x50') then
+          $mult1d = 50 
+        elseif ($2 = 'x100') then
+          $mult1d = 100  
+        endif
+        $ix = 3
+      endif
+    endif
+  endif
+  if $# >= $ix then		" check for further (numeric) arguments "
+    $levels = ${$ix}		" first numeric argument (levels) "
+  else
+    $levels = 7
+  endif
+  $ix = 1+$ix
+  if $# >= $ix then		" check for further (numeric) arguments "
+    $spacing = ${$ix}		" second numeric argument (spacing) "
+  else
+    $spacing = 2
+  endif
+  $ix = 1+$ix
+  if $# >= $ix then		" check for further (numeric) arguments "
+    if ${$ix} < 0.5 then	" third numeric argument (1D experiment) "
+      $do1d = 0
+    else
+      $Hexpno = ${$ix}
+      if $Hexpno <> $curexp then 
+        $fetch1d = 1
+      else 
+        $fetch1d = 0 
+      endif
+      " if 1D data have already been stored in current experiment, "
+      " the third numeric argument overrides this file "
+      exists($file1d,'directory'):$eH1
+      if ($eH1)and($fetch1d) then
+        shell('rm -rf',$file1d):$res
+      endif
+    endif
+  else		" exp# argument defaults to 1 if internal file not found "
+    exists($file1d,'directory'):$eH1
+    if (not($eH1))and(auto = 'n') then
+      $fetch1d = 1
+    endif
+  endif
+else
+  exists($file1d,'directory'):$eH1
+  if (not($eH1))and(auto = 'n') then
+    $fetch1d = 1
+  endif
+endif
+
+if auto = 'y' then
+   exists($file1da,'directory'):$eH1
+   if not($eH1) then
+      echo($file1da+' not found')
+      $do1d = 0
+   endif
+else
+   if ($do1d > 0.5) and ($fetch1d = 0) then
+      exists($file1d,'directory'):$eH1
+      if not($eH1) then
+	 $do1d = 0
+      endif
+   endif
+endif
+
+if dmg = 'av' then		" av spectrum - suppress 'pos', 'neg' options "
+   $pos=''
+endif
+
+" determine which vs adjustment macro to use "
+substr(tn,1,1):$str1
+format($str1,'lower'):$str
+exists('vsadj'+$str1,'maclib'):$e
+if $e then
+   $vsadj = 'vsadj'+$str1
+else
+   $vsadj = 'vsadj'
+endif
+$trace = trace			" remember 2D trace mode "
+$seqfil = seqfil		" remember 2D pulse sequence name "
+
+" find out about text geometry "
+write('plotter',0,0,''):$lineht 	" character width is $lineht/2 "
+substr($parcmd,1,3):$parsubcmd
+if $parcmd='' then
+   $parwidth = 0
+else
+   if $parsubcmd = 'ppa' then
+      $parwidth = 30*$lineht/2+3	" 3 is the default ppa X offset "
+   else
+      if $parsubcmd = 'pap' then
+        $parwidth = 38*$lineht/2+5	" 5 is the default pap X offset "
+      else
+        $parwidth = 0
+      endif
+   endif
+endif
+
+" determine 2D plot size "
+if $do1d > 0.5 then
+   $size1d = 0.15*wc2max	" leave room for 1D traces "
+   if $size1d > 60 then
+      $size1d = 60
+   endif
+else
+   $size1d = 3			" no 1D traces - use full space "
+endif
+full
+
+if $parcmd <> '' then
+   if $parsubcmd = 'bpa' then
+      bpa:$sc2			" bpa parameter printout "
+      wc2 = wc2-$sc2
+      sc2 = $sc2
+   else
+      {$parcmd}			" parameter printout "
+   endif
+endif
+
+$scalewidth = wcmax-sc-wc
+wc = wc-$parwidth-$size1d
+wc2 = wc2max-$size1d-sc2
+
+" make plot square shaped "
+if (wc > wc2) then
+   $size1d = $size1d+(wc-wc2)
+   wc = wc2
+else
+   wc2 = wc
+endif
+
+"calculate size of 1D traces "
+if $do1d > 0.5 then
+   $topvp = -8		" margin is 10, trace will be 2 mm above 2D "
+   $leftvp = -5
+   $top_ht = wc2max-wc2-sc2-10-$topvp	" 10 is default margin "
+   $left_ht = $size1d-$leftvp
+endif
+
+" do contour plot "
+if (array = 'phase') and ($pos = '') and (dmg = 'ph') and (maxpen = 1) then
+   pcon('pos',$levels,$spacing)
+   $axis = axis
+   axis = 'nn'
+   pcon('neg',1)
+   axis = $axis
+else
+   if ($pos <> '') then
+     pcon($pos,$levels,$spacing)
+   else
+     pcon($levels,$spacing)
+   endif
+endif
+
+$reffrq2d = sfrq-(sw/2-rfl+rfp)/1e6
+
+" plot 1D traces, if requested "
+if $do1d > 0.5 then
+   $spppm = sp/$reffrq2d
+   $wpppm = wp/$reffrq2d
+   $sp1ppm = sp1/$reffrq2d
+   $wp1ppm = wp1/$reffrq2d
+   s9				    " save starting 2d parameters "
+   if (auto = 'n') then
+      if $fetch1d then		    " fetch 1D data from other experiment "
+	 svtmp($seqfil)
+	 jexp:$curexp
+	 mf($Hexpno,$curexp)
+	 cptmp(tn)
+      else
+	 svtmp($seqfil)
+	 rttmp(tn)		    " get 1D data from internal file "
+      endif
+   else				    " automation mode "
+      " read in external fid file "
+      rt($file1da)
+   endif
+
+   " got 1D data - do 1D plots "
+   wft('nods')			    " insure the data are transformed "
+   r9
+   cdc				    " remove drift correction flag "
+   " use cutoff mode to avoid overlap of 1D traces with parameters / 2D "
+   intmod = 'off'
+   exists('cutoff','parameter'):$e
+   if $e < 0.5 then
+      create('cutoff','integer')
+      setprotect('cutoff','on',80)
+      setgroup('cutoff','display')
+   endif
+
+   $reffrq1d = sfrq-(sw/2-rfl+rfp)/1e6
+
+   " plot f2 trace "
+   sp = $spppm*$reffrq1d
+   wp = $wpppm*$reffrq1d
+   if ($trace = 'f1') then
+      vp = $leftvp
+      {$vsadj}($left_ht*$mult1d)
+      cutoff = $left_ht,10+vp
+      pl('side')
+   else
+      vp = $topvp
+      {$vsadj}($top_ht*$mult1d)
+      cutoff = $top_ht,10+vp
+      $sc2 = sc2
+      sc2 = 0
+      wc2 = wc2+$sc2
+      pl('top')
+      wc2 = wc2-$sc2
+      sc2 = $sc2
+   endif
+
+   " plot f1 trace "
+   sp = $sp1ppm*$reffrq1d
+   wp = $wp1ppm*$reffrq1d
+   if ($trace = 'f1') then
+      vp = $topvp
+      {$vsadj}($top_ht*$mult1d)
+      cutoff = $top_ht,10+vp
+      $sc2 = sc2
+      sc2 = 0
+      wc2 = wc2+$sc2
+      pl('top')
+      wc2 = wc2-$sc2
+      sc2 = $sc2
+   else
+      vp = $leftvp
+      {$vsadj}($left_ht*$mult1d)
+      cutoff = $left_ht,10+vp
+      pl('side')
+   endif
+
+   " if not in automation mode, retrieve 2D data and redisplay spectrum "
+   if (auto = 'n') then
+      rttmp($seqfil)
+   endif
+endif
+
+"save the data from a glide hcosy experiment"
+if (auto = 'n') then
+  exists(curexp+'/eou_saveas','file'):$e
+  if ($e>.5) then
+    $fln=''
+    lookup('file',curexp+'/eou_saveas','read',1):$fln
+    write('plotter',190,wc2max,'Filename: %s', $fln+'_'+macro)
+  endif
+endif
+
+if (auto = 'n') then
+   dconi
+endif
+page				" eject page "
