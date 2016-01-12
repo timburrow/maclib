@@ -1,0 +1,37 @@
+"**************************************************************"
+"pi4ssbsq - macro to set both F1 and F2 windows to be          "
+"           pi/4 shifted sine-bell squared functions           "
+"usage    - pi4ssbsq(<number of increments used>)              "
+"**************************************************************"
+
+exists('ni','parameter'):$niexist
+exists('ni2','parameter'):$ni2exist
+if $niexist=0 then
+ if $# > 0 then
+  write('error','not a 2D or 3D data set - use NO argument')
+ endif
+else
+ if $ni2exist = 0 then
+  if $# > 1 then
+   write('error','not a 3D data set - use only ONE argument')
+  else
+   if $# = 0 then $1 = ni endif
+  endif
+ else
+  if $# > 2 then
+   write('error','too many arguments for this macro')
+  else
+   if $# = 0 then $1 = ni $2 = ni2 endif
+   if $# = 1 then $2 = ni2 endif
+  endif
+ endif
+endif
+
+gf='n' lb='n' awc='n' sb=-at*3/4 sbs=-at/2
+if $niexist <> 0 then
+gf1='n' lb1='n' awc1='n' sb1=-$1*3/(sw1*4) sbs1=-$1/(sw1*2)
+endif
+if $ni2exist <> 0 then
+gf2='n'  lb2='n' awc2='n' sb2=-$2*3/(sw2*4) sbs2=-$2/(sw2*2)
+endif
+

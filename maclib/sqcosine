@@ -1,0 +1,32 @@
+"sqcosine - sets up squared cosine function"
+
+exists('ni','parameter'):$niexist
+exists('ni2','parameter'):$ni2exist
+if $niexist=0 then
+ if $# > 0 then 
+   write('error','not a 2D or 3D data set - use NO argument')
+ endif
+else
+ if $ni2exist = 0 then
+   if $# > 1 then
+    write('error','not a 3D data set - use only ONE argument')
+   else
+    if $# = 0 then $1 = ni endif
+   endif
+ else
+   if $# > 2 then
+    write('error','too many arguments for this macro')
+   else
+    if $# = 0 then $1 = ni $2 = ni2 endif
+    if $# = 1 then $2 = ni2 endif
+   endif
+ endif
+endif
+
+lb='n' gf='n' gfs='n' awc='n' sb=-at sbs=sb
+if $niexist<>0 then
+lb1='n' gf1='n' gfs1='n' awc1='n' sb1=-$1/sw1 sbs1=sb1
+endif
+if $ni2exist<>0 then
+lb2='n' gf2='n' gfs2='n' awc2='n' sb2=-$2/sw2 sbs2=sb2
+endif
