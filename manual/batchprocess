@@ -1,0 +1,45 @@
+  The two macros enclosed in this package, "batchprocess" and "qEst2csv", were
+written to provide users a mechanism allowing easy processing of a large
+number of spectra and the ability to then export the calculated concentration
+of an analyte in those spectra to a comma separated value, or CSV, file that
+canb be imported into a spreadsheet. The "batchprocess" utility is a general
+tool that only loads the data and then uses whatever processing macro is
+defined when the macro is called. The "qEst2csv" processing is such a macro -
+it is specific for a given molecule and is used to create a CSV file
+containing calculated concentration values.
+
+  The "qEst2csv" macro is intended to be used only as an example for the user
+to customize as needed to fit the requirements of their particular study. This
+macro processes a spectrum, integrates specific peaks (as defined in the
+macro), calculates the concentration of the molecule represented by those
+peaks, and then exports the results to a CSV file. The macro, as supplied, can
+be used to process the PROTON spectrum of Clindamycin in the FID library with
+VnmrJ 3.1A (i.e., "/vnmr/fidlib/Clindamycin/Clindamycin_PROTON_01.fid").
+
+  The "batchproces" macro is the utility that runs the analysis. This macro
+requires three arguments:
+ - arg1: The directory that holds the data (this can be an absolute path OR
+   a relative path with respect to "userdir+'/data'")
+ - arg2: The "pslabel" for the type of data to be processed (e.g., "PROTON",
+   "CARBON", or "gHSQCAD")
+ - arg3: The processing macro to be used.
+
+  For example, executing
+	batchprocess('/home/data/myfiles','PROTON','my_processing_macro')
+on the command line will parse all the Study directories in the "myfiles"
+directory, load all the "PROTON" data from each of the Studies, and process
+those FIDs using the "my_processing_macro" macro. Assumptions:
+ - All the data to be processed were collected in a Study (i.e., using the
+   automation tools in Chempack 4.1 or VnmrJ 3.x).
+ - The data must have been acquired using a calibrated probe file that
+   contained appropriate quantitation parameters. Alternatively, the current
+   probe file must have quantitation parameters appropriate to the actual
+   probe used to acquire the original data.
+
+  By combining the "batchprocess" utility with an appropriately edited
+"qEst2csv" macro, one could take all the spectra collected for a laboratory
+class or a QA/QC investigation, have the system automatically process each
+spectrum in the group, and assemble a CSV file as output that contains the
+absolute concentration value calculated for every sample in the investigation.
+
+

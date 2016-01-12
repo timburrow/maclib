@@ -1,0 +1,73 @@
+/************************************************
+This macro is intended as an example that users 
+would need to edit to meet their requirements.  This 
+macro is configured to process the PROTON spectrum of
+clindamycin found in /vnmr/fidlib/Clindamycin.  This
+operation is predicated on the probe file being
+calibrated with the required qEstimate parameters.
+
+This macro processes 1D data, sets integral regions,
+calculates the absolute concentration determined from
+those integral regions, and writes those results into
+a csv file called "Mycsvdata" in userdir/data.
+
+***********************************************/
+
+
+// Process the spectrum
+
+fn=256k lb=.3 wft
+
+// Set integral regions
+
+cz z(4.68p,4.54p) z(4.53p,4.41p) z(4.40p,4.27p)
+z(4.18p,4.04p) z(3.97p,3.81p)
+
+// Run qEstimate to calculate concentrations
+
+qEstimate
+
+// Read the concentrations for the individual integrals
+
+integ(4.54p,4.68p):$size1,$conc1_raw
+integ(4.41p,4.53p):$size2,$conc2_raw
+integ(4.27p,4.40p):$size3,$conc3_raw
+integ(4.04p,4.18p):$size4,$conc4_raw
+integ(3.81p,3.97p):$size5,$conc5_raw
+
+/* Scale the concentrations based on the number of
+    nuclei in each region */
+
+$conc1=$conc1_raw/1
+$conc2=$conc2_raw/1
+$conc3=$conc3_raw/2
+$conc4=$conc4_raw/1
+$conc5=$conc5_raw/2
+
+// Define labels for each region
+
+$reg1='quartet'
+$reg2='AB signal'
+$reg3='overlap signal'
+$reg4='double doublet'
+$reg5='narrow ABq'
+
+// Calculate the average concentration
+
+$avgconc=($conc1+$conc2+$conc3+$conc4+$conc5)/5
+$regavg='Average Concentration'
+
+// Write the results into a csv file
+
+$outfile=(userdir+'/data/Mydata.csv')
+write('file',$outfile,'%s,%2.3f',$reg1,$conc1)  
+write('file',$outfile,'%s,%2.3f',$reg2,$conc2)
+write('file',$outfile,'%s,%2.3f',$reg3,$conc3)
+write('file',$outfile,'%s,%2.3f',$reg4,$conc4)
+write('file',$outfile,'%s,%2.3f',$reg5,$conc5)
+write('file',$outfile,'%s,%2.3f',$regavg,$avgconc)
+
+// Display the spectrum
+
+intmod='partial' ds
+

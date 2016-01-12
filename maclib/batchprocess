@@ -1,0 +1,61 @@
+/*
+
+This utility loads and processes spectra automatically.  It requires three arguements:
+
+Arg1-pathname to a directory holding Studydirs to be used
+Arg2-pslabel of spectra to be processed
+Arg3-processing macro to execute for each fid
+
+batchprocess('/home/data/myStudyfiles','PROTON','myprocessingmacro')
+
+The data must have been collected in automation using a version of VJ3 or CP4.
+
+*/
+
+
+$firstchar='' substr($1,1,1):$firstchar
+if ($firstchar<>'/') then
+//   pwd:$curdir
+//   $1=$curdir+'/'+$1
+   $1=userdir+'/data/'+$1
+endif
+
+$tmpfile=userdir+'/persistence/'+$0
+write('reset',$tmpfile)
+shell('(ls -1 '+$1+'/*/dirinfo/fidlog > '+$tmpfile+')'):$dum
+$s1='' $s2=''
+readfile($tmpfile,'$s1','$s2','','local'):$total
+shell('rm -f '+$tmpfile):$dum
+if ($total=0) then
+   write('error','There are no fidlogs in this directory')
+   return
+endif
+
+write('reset',$tmpfile)
+$i=1
+repeat
+    $dir='' strstr($s1[$i],'/dirinfo/'):$ok,$dir
+    shell('(cat '+$s1[$i]+' | grep \'^'+$2+':\' | awk \'{print "'+$dir+'/"$2}\' >> '+$tmpfile+')'):$dum
+    $i=$i+1
+until $i > $total
+
+$s1='' $s2=''
+readfile($tmpfile,'$s1','$s2','','local'):$total
+shell('rm -f '+$tmpfile):$dum
+if ($total=0) then
+     write('error','There are no %s fids in this directory',$2)
+     return
+endif
+
+$i=1
+repeat
+    exists($s1[$i]+'.fid','directory'):$fidex
+    if ($fidex=0) then
+        write('error','%s.fid not found',$s1[$i])
+    else
+        write('line3','Recalling %s and executing %s',$s1[$i],$3)
+        rt($s1[$i])
+        exec($3):$dum
+    endif
+    $i=$i+1
+until $i > $total
