@@ -1,0 +1,80 @@
+********************************************************************************
+ macrocalls -   Find macro calls to or from specified macro (UNIX)
+********************************************************************************
+
+ Syntax: macrocalls <-f> <-r> <-w|-W> -up macro <maclibpath <sysmaclibpath>>
+         macrocalls <-a> <-f> <-r> <-w|-W> macro <maclibpath <sysmaclibpath>>
+         macrocalls -h
+         macrocalls -v
+         macrocalls -rev
+
+ Description: "macrocalls" is a UNIX utility that permits finding macros called
+	      by a given macro, or macros calling a given macro. There are also
+	      options to find nested submacros, or higher level parent macros.
+	      "macrocalls" considers macros in the entire VNMR macro path:
+		   ~/vnmrsys/maclib ->
+		      maclibpath (optional) ->
+			 sysmaclibpath (optional) ->
+			    /vnmr/maclib
+	      More information is found in the argument description below.
+	      Two "wrapper macros", "findsubmacros" and "findparentmacros"
+	      facilitate using "macrocalls" from within VNMR (recommended).
+
+ 	      KNOWN LIMITATIONS:
+		- "macrocalls" lists submacros that COULD BE called - which
+		  often depends on the outcome of logical decisions in a
+		  macro. Which macros are ACTUALLY called in a given context
+		  can only be found out by RUNNING the macro! The same applies
+		  to the search for parent macros.
+  		- underscore macros are not covered unless called explicitly
+  		- "exec" calls are not looked up or followed
+  		- command substitution ({}) is not taken into account
+  		- command does not know about hidecommand etc. - it assumes
+		  that macros have precedence over VNMR commands, which IS NOT
+		  THE CASE
+  		- macro calls from menus, Tcl-dg templates, VnmrJ layouts are
+		  not considered
+  		- ACCURACY & COMPLETENESS OF THE OUTPUT ARE NOT GUARANTEED!
+		- it would be nice if "macrocalls -r" would indicate the
+		  nesting hierarchy ...
+
+   Arguments: With the exception of the macro name, all arguments are optional.
+	      The sequence of the option arguments is arbitrary, the sequence of
+	      the optional "maclibpath" and "sysmaclibpath" arguments is
+	      SIGNIFICANT: sysmaclibpath must be specified after maclibpath, as
+	      this is the order of precedence in VNMR.
+		macro  name of macro to scan
+		-a     list actual call sequence, including repetitive calls
+                       (not allowed with the "-up" and "-r" options)
+  		-f     report full macro paths
+  		-h     display recipe / help
+  		-r     recursive / exhaustive search for sub- or parent macros
+  		-rev   display command revision date
+  		-up    list macros calling the specified macro
+                       rather than submacro calls
+  		-w     includes conditional calls through wbs/wnt/wexp/werr
+                       (not allowed with the "-r" option)
+  		-W     list conditional calls through wbs/wnt/wexp/werr ONLY
+  		maclibpath     optional maclibpath
+  		sysmaclibpath  optional system maclib path
+
+ Examples: 	macrocalls setup
+         	macrocalls -a setup
+         	macrocalls -a -f setup
+         	macrocalls -r setup
+         	macrocalls -r -f setup
+         	macrocalls -f -w BPauto2d1
+         	macrocalls -r -f -W BPauto2d1
+         	macrocalls -r -f epirun /vnmr/maclib/maclib.imaging
+		macrocalls -up setup
+		macrocalls -up -f BPauto2d22
+		macrocalls -up -w BPauto2d22
+		macrocalls -up -f -r setup
+		macrocalls -up -f -w BPauto2d22
+		macrocalls -up -f -r -W BPauto2d22
+         	macrocalls -h
+         	macrocalls -v
+
+ Related: findsubmacros - find macros called by a given macro (M)
+	  findparentmacros - find macros calling a given macro (M)
+

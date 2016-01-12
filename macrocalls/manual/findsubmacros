@@ -1,0 +1,78 @@
+
+********************************************************************************
+ findsubmacros -    Find macros called in the specified macro (M)
+ findparentmacros - Find macros calling the specified macro (M)
+********************************************************************************
+
+ Syntax: findsubmacros(macro<,'all'><,'w< only>'><,'nested'><,'path'>)
+         findparentmacros(macro<,'all'><,'w< only>'><,'nested'><,'path'>)
+
+ Description: This is a set of utilities that permit finding macros called
+	      by a given macro, or macros calling a given macro. There are also
+	      options to find nested submacros, or higher level parent macros,
+	      respectively. The entire VNMR macro path is used:
+		   ~/vnmrsys/maclib ->
+		      maclibpath (optional) ->
+			 sysmaclibpath (optional) ->
+			    /vnmr/maclib
+	      More information is found in the argument description below.
+	      Note that the "nested" option (particularly when using
+	      "findparentmacros" with "popular" macros) may take very long:
+	      execution times of 30 minutes or more are possible. These
+	      utilities are meant to be complementary to using "debug('c')"
+	      in VNMR.
+
+ 	      KNOWN LIMITATIONS:
+                - "macrocalls" lists submacros that COULD BE called - which
+                  often depends on the outcome of logical decisions in a
+                  macro. Which macros are ACTUALLY called in a given context
+                  can only be found out by RUNNING the macro! The same applies
+                  to the search for parent macros.
+  		- underscore macros are not covered unless called explicitly
+  		- "exec" calls are not looked up or followed
+  		- command substitution ({}) is not taken into account
+  		- command does not know about hidecommand etc. - it assumes
+		  that macros have precedence over VNMR commands, which IS NOT
+		  THE CASE
+  		- macro calls from menus, Tcl-dg templates, VnmrJ layouts are
+		  not considered
+  		- ACCURACY & COMPLETENESS OF THE OUTPUT ARE NOT GUARANTEED!
+		- it would be nice if the "nested" option would indicate the
+		  nesting hierarchy ...
+
+   Arguments: With the exception of the macro name (which must be the first
+	      argument), all arguments are optional. The sequence of the other
+	      arguments is arbitrary.
+		macro       Name of macro to scan (or scan for)
+		'all'       List actual call sequence, including repetitive
+			    calls (not allowed with the "findparentmacroup"
+			    and with the "nested" option)
+  		'path'      Report full macro paths
+  		'fullpath'  Same as 'path'.
+  		'nested'    Recursive / exhaustive search for sub- or parent
+			    macros (macro calls inside submacros etc., or
+			    macros calling the parent macro etc.)
+  		'w'         Include conditional calls through "wbs", "wnt",
+			    "wexp", and "werr" (not allowed with the 'nested'
+			    option)
+  		'w only'    List ONLY conditional calls through "wbs", "wnt",
+			    "wexp", and "werr"
+
+ Examples: 	findsubmacros('setup')
+         	findsubmacros('setup','all')
+         	findsubmacros('setup','all','path')
+         	findsubmacros('setup','nested')
+         	findsubmacros('setup','nested','path')
+         	findsubmacros('setup','all','path')
+         	findsubmacros('setup','all','path')
+         	findsubmacros('BPauto2d1','path','w')
+         	findsubmacros('BPauto2d1','nested','path','w only')
+         	findsubmacros('epirun','nested','path')
+		findparentmacros('setup')
+                findparentmacros('BPauto2d22','path')
+                findparentmacros('BPauto2d22','w','path')
+                findparentmacros('setup','nested','path')
+                findparentmacros('BPauto2d22','w','path')
+                findparentmacros('BPauto2d22','nested','w only','path')
+
+ Related: macrocalls - Find macro calls to or from specified macro (UNIX)

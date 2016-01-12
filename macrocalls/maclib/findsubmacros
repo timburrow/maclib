@@ -1,0 +1,73 @@
+" findsubmacros - find macros called in the specified macro "
+"   (wrapper macro for bin/macrocalls)                      "
+
+" Usage: findsubmacros(macroname<,'all'><,'w< only>'><,'nested'><,fullpath'>)   "
+"        findparentmacros(macroname<,'all'><,'w< only>'><,'nested'><,fullpath'>)"
+
+$slow=0
+if $0='findsubmacros' then
+  $cmd='macrocalls'
+else
+  $cmd='macrocalls -up'
+  $slow=1
+endif
+if $#=0 then
+  write('error','%s: must specify the name of a macro!',$0)
+  man($0)
+  return
+endif
+if not(typeof('$1')) then
+  write('error','%s: argument must be the name of a macro!',$0)
+  man($0)
+  return
+endif
+$ix=2
+$arg=''
+while $ix<=$# do
+  format($ix,0,0):$arg
+  if not(typeof('$'+$arg)) then
+    write('error','%s: does not take numeric arguments',$0)
+    man($0)
+    return
+  endif
+  if ${$ix}='all' then
+    $cmd=$cmd+' -a'
+  elseif ${$ix}='w' then
+    $cmd=$cmd+' -w'
+  elseif ${$ix}='w only' then
+    $cmd=$cmd+' -W'
+  elseif ${$ix}='nested' then
+    $cmd=$cmd+' -r'
+    $slow=1+$slow
+  elseif ${$ix}='fullpath' then
+    $cmd=$cmd+' -f'
+  elseif ${$ix}='path' then
+    $cmd=$cmd+' -f'
+  else
+    write('error','%s: unknown argument "%s"',$0,${$ix})
+    man($0)
+    return
+  endif
+  $ix=1+$ix
+endwhile
+$cmd=$cmd+' '+$1
+exists('maclibpath','parameter','global'):$e
+if $e then
+  if maclibpath<>'' then
+    $cmd=$cmd+' '+maclibpath
+  endif
+endif
+exists('sysmaclibpath','parameter','global'):$e
+if $e then
+  if sysmaclibpath<>'' then
+    $cmd=$cmd+' '+sysmaclibpath
+  endif
+endif
+if $slow<>0 then
+  write('line3','This may take a while, please wait ...')
+endif
+clear
+shell($cmd)
+if $slow<>0 then
+  write('error','')
+endif

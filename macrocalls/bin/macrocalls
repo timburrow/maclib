@@ -1,0 +1,921 @@
+#!/bin/sh
+# macrocalls - find macro calls to or from specified macro
+#------------------------------------------------------------------------------
+# Usage:  macrocalls <-f> <-r> <-w|-W> <-up> macro <maclibpath <macrosyspath>>
+#         macrocalls <-a> <-f> <-r> <-w|-W> macro <maclibpath <macrosyspath>>
+#         macrocalls -h
+#         macrocalls -v
+#         macrocalls -rev
+#------------------------------------------------------------------------------
+# Arguments:
+#  -a             list actual call sequence, including repetitive calls
+#                    (not allowed with the "-up" and "-r" options)
+#  -f             report full macro paths
+#  -h             display recipe / help
+#  -r             recursive / exhaustive search for sub- or parent macros
+#  -rev           display command revision date
+#  -up            list macros calling the specified macro
+#                    rather than submacro calls
+#  -w             includes conditional calls through wbs/wnt/wexp/werr
+#                    (not allowed with the "-r" option)
+#  -W             list conditional calls through wbs/wnt/wexp/werr ONLY
+#  macro          name of macro to scan
+#  maclibpath     optional maclibpath
+#  sysmaclibpath  optional system maclib path
+#------------------------------------------------------------------------------
+# Known limitations:
+#  - underscore macros are not covered
+#  - exec calls are not looked up or followed
+#  - command substitution ({}) is not taken into account
+#  - command does not know about hidecommand etc. - it assumes macros
+#	have precedence over VNMR commands, which IS NOT TRUE
+#  - macro calls from menus, Tcl-dg templates, VnmrJ layouts are not considered
+#  - ACCURACY & COMPLETENESS OF OUTPUT ARE NOT GUARANTEED!
+#------------------------------------------------------------------------------
+# Revision history:
+#       2003-02-03 - rk, started from "checkmacros" utility
+#	2003-02-04 - rk, first complete version, commented
+#	2003-02-05 - rk, arg checking & feedback improved, bug fixes
+#	2003-02-07 - rk, fixed bug in tokenizer
+#	2004-11-25 - rk, tokenizer enhanced (suppress more unwanted output)
+#       2005-11-06 - rk, fixed escaping of "`" on lines 137 & 138
+#
+
+revdate=2005-11-06
+
+# Compatibility section
+if [ `uname` = SunOS ]; then
+  awk=nawk
+else
+  awk=awk
+fi
+
+# make sure VNMR environment variables are defined
+if [ x$vnmrsystem = x ]; then
+  vnmrsystem=/vnmr
+fi
+if [ x$vnmruser = x ]; then
+  vnmruser=$HOME/vnmrsys
+fi
+export vnmruser vnmrsystem
+usermaclib=$vnmruser/maclib
+sysmaclib=$vnmrsystem/maclib
+
+cmd=`basename $0`
+result=$vnmruser/$cmd.out
+
+up=0		# changed with "-up" argument
+recursive=0	# changed with "-r" argument
+conditional=0	# changed with "-w" argument
+fullpath=0	# changed with "-f" argument
+listall=0	# changed with "-a" argument
+debug=0		# changed with "-d" argument
+
+selfcall=1	# list calls of a macro by itself
+downpasses=100	# maximum number of recursive search loops (down)
+uppasses=100	# maximum number of recursive search loops (up)
+
+tok=$vnmrsystem/tmp/$cmd.tok.$$
+tok2=$vnmrsystem/tmp/$cmd.tok2.$$
+par=$vnmrsystem/tmp/$cmd.par.$$
+tmp=$vnmrsystem/tmp/$cmd.tmp.$$
+tmp2=$vnmrsystem/tmp/$cmd.tmp2.$$
+rres=$vnmrsystem/tmp/$cmd.rres.$$
+add_rres=$vnmrsystem/tmp/$cmd.add_rres.$$
+rres2=$vnmrsystem/tmp/$cmd.rres2.$$
+dbg=$vnmrsystem/tmp/$cmd.debug
+
+
+#------------------------------------------------------------------------------
+# tokenize() - extract macro tokens from specified macro
+#------------------------------------------------------------------------------
+# arg1: macro (full path)
+#
+#------------------------------------------------------------------------------
+# This is a messy function which is hard to document; the steps are roughly
+# as follows:
+#  - the initial "awk" call concatenates multi-line macro calls (lines
+#    ending with ",", "+" and "\")
+#  - the following "sed" call removes comments, and content between braces "{}"
+#    (note that /* ... */ comment is NOT handled as such at this time!)
+#  - space in math expressions, around commas, and in parentheses is removed
+#  - brackets ([]) and their contents are eliminated
+#  - expressions setting the parameters explist, macro, pslabel, seqfil, and
+#    $parlist are removed
+#  - the VNMR commands banner, create, format, input, lookup, shell, and write
+#    are removed
+# more comment below.
+#------------------------------------------------------------------------------
+
+tokenize() {
+  expand $1 | sed 's/ [ ]*$//' | $awk '
+  {
+    if (substr($NF,length($NF),1) == "\\")
+      printf("%s ",substr($0,1,length($0)-1))
+    else
+    {
+      if ((substr($NF,length($NF),1) == ",") ||
+	  (substr($NF,length($NF),1) == "+"))
+        printf("%s ",$0)
+      else
+        print
+    }
+  }' | stripcomment | sed "s/{.*}//g
+s/[ ]*=[ ]*/=/g
+s/[ ]*<>[ ]*/=/g
+s/[ ]*+[ ]*/+/g
+s/[ ]*-[ ]*/-/g
+s/[ ]*\/[ ]*/\//g
+s/[ ]*\*[ ]*/\*/g
+s/[ ]*%[ ]*/%/g
+s/[ ]*,[ ]*/,/g
+s/([ ]*/(/g
+s/[ ]*)/)/g
+s/^\$parlist=[',\$ a-zA-Z0-9_]*//
+s/ \$parlist=[',\$ a-zA-Z0-9_]*//g
+s/\[[0-9$_a-zA-Z]\]//g
+s/^explist=['\`,\$a-zA-Z0-9_]*//
+s/ explist=['\`,\$a-zA-Z0-9_]*//g
+s/^appmode='[a-zA-Z0-9_]*'//
+s/ appmode='[a-zA-Z0-9_]*'//g
+s/^macro='[a-zA-Z0-9_]*'//
+s/ macro='[a-zA-Z0-9_]*'//g
+s/^pslabel='[a-zA-Z0-9_]*'//
+s/ pslabel='[a-zA-Z0-9_]*'//g
+s/^seqfil='[a-zA-Z0-9_]*'//
+s/ seqfil='[a-zA-Z0-9_]*'//g
+s/^banner(.*)//
+s/ banner(.*)//g
+s/^create(.*)//
+s/ create(.*)//g
+s/^format(.*)//
+s/ format(.*)//g
+s/^input(.*)//
+s/ input(.*)//g
+s/^lookup(.*)//
+s/ lookup(.*)//g
+s/^shell(.*)//
+s/ shell(.*)//g
+s/^write(.*)//
+s/ write(.*)//g
+" > $tok
+  if [ $debug -eq 1 ]; then
+    cp $tok $dbg.0
+  fi
+
+#------------------------------------------------------------------------------
+# if conditional calls are to be suppressed, expressions setting wbs, werr,
+# wexp, and wnt are suppressed, as well as the corresponding commands
+#------------------------------------------------------------------------------
+  if [ $conditional -eq 0 ]; then
+    cat $tok | sed "s/^wbs=(.*)//
+s/ wbs(.*)//g
+s/^werr(.*)//
+s/ werr(.*)//g
+s/^wexp(.*)//
+s/ wexp(.*)//g
+s/^wnt(.*)//
+s/ wnt(.*)//g
+s/^wbs='[a-zA-Z0-9_()\`]*'//
+s/ wbs='[a-zA-Z0-9_()\`]*'//g
+s/^werr='[a-zA-Z0-9_()\`]*'//
+s/ werr='[a-zA-Z0-9_()\`]*'//g
+s/^wexp=[',\$a-zA-Z0-9_()\`]*//
+s/ wexp=[',\$a-zA-Z0-9_()\`]*//g
+s/^wnt='[a-zA-Z0-9_()\`]*'//
+s/ wnt='[a-zA-Z0-9_()\`]*'//g
+" > $tok2
+
+#------------------------------------------------------------------------------
+# if on the other hand ONLY conditional calls are to be shown, we selectively
+# extract expresseions setting wbs, werr, wexp, and wnt and the related cmds.
+#------------------------------------------------------------------------------
+  elif [ $conditional -eq 2 ]; then
+    cat $tok | egrep ' wbs|^wbs| werr|^werr| wexp|^wexp| wnt|^wnt' | \
+       sed "s/ wbs('//g
+s/^wbs('//g
+s/ werr('//g
+s/^werr('//g
+s/ wexp('//g
+s/^wexp('//g
+s/ wnt('//g
+s/^wnt('//g
+" > $tok2
+
+#------------------------------------------------------------------------------
+# do nothing if conditional calls are to be included
+#------------------------------------------------------------------------------
+  else
+    mv $tok $tok2
+  fi
+  if [ $debug -eq 1 ]; then
+    cp $tok2 $dbg.1
+  fi
+
+#------------------------------------------------------------------------------
+# eliminate expressions setting a local variable
+# eliminate expressions setting an indexed local variable
+# eliminate exists, length, size, sqrt, substr, trunc & typeof operators
+# ------
+# eliminate parentheses and contents
+# eliminate local variable names
+# eliminate "if [condition] then"
+# eliminate return arguments
+# eliminate "=" and remainder of assignment statements
+# replace math operators by spaces
+# compact spaces
+# remove trailing & leading spaces
+# ------
+# replace remaining quotes by spaces
+# now break lines into 1-word (token) lines
+# remove "-", "?", and tokens starting with a number
+# substitute RT / RTP by "fixpar"
+# eliminate abort, abortoff, aborton, and, break ... while MAGICAL operators,
+#   n & y MAGICAL tokens, plus a set of common VNMR commands
+# finally, suppress empty lines (awk)
+#------------------------------------------------------------------------------
+  cat $tok2 | sed "s/^\$[a-zA-Z0-9_]*=['\$a-zA-Z0-9_,()+\`]*//g
+s/^\$[a-zA-Z0-9_]\[.*\]*=['\$a-zA-Z0-9_,()+\`]*//g
+s/^[Ee][Xx][Ii][Ss][Tt][Ss](.*)//g
+s/^[Ll][Ee][Nn][Gg][Tt][Hh](.*)//g
+s/^[Ss][Ii][Zz][Ee](.*)//g
+s/^[Ss][Qq][Rr][Tt](.*)//g
+s/^[Ss][Uu][Bb][Ss][Tt][Rr](.*)//g
+s/^[Tt][Rr][Uu][Nn][Cc](.*)//g
+s/^[Tt][Yy][Pp][Ee][Oo][Ff](.*)//g
+s/( /(/g
+s/ )/)/g
+s/until[ ]*(((.*)))/ /
+s/until[ ]*((.*))/ /
+s/until[ ]*(.*)/ /
+" | sed 's/([ ]*[Nn][Oo][Tt][ ]*(/((/g
+s/ [ ]*[Nn][Oo][Tt][ ]*(/(/g
+s/([^(]*)/ /g
+s/([^(]*)/ /g
+s/([^(]*)/ /g
+s/([^(]*)/ /g
+s/(/ /g
+s/)/ /g
+s/ [ ]*/ /g' | tr ' ' '\012' | $awk '
+{
+  if (($0 == "if") || ($0 == "elseif"))
+  {
+    while ($0 != "then")
+    {
+      getline
+    }
+  }
+  else if ($0 == "while")
+  {
+    while ($0 != "do")
+    {
+      getline
+    }
+  }
+  else
+    print
+}' | sed 's/\$[a-zA-Z0-9_]*//g
+s/:[\$a-zA-Z0-9\,]*//g
+s/=[\$a-zA-Z0-9_\+\-\/\*\%]*//g
+s/[+\-\/\*\<\>\=\,]/ /g
+s/ [ ]*/ /g
+s/ $//
+s/^ //' | tr "\'" " " | tr ' ' '\012' | sed 's/-//g
+s/\?//g
+s/^[0-9\.][0-9a-zA-Z\.]*$//
+s/^RTP$/fixpar/g
+s/^RT$/fixpar/g
+s/^ABORT$//g
+s/^abort$//g
+s/^ABORTOFF$//g
+s/^abortoff$//g
+s/^ABORTON$//g
+s/^aborton$//g
+s/^AND$//g
+s/^and$//g
+s/^BREAK$//g
+s/^break$//g
+s/^DO$//g
+s/^do$//g
+s/^ELSE$//g
+s/^else$//g
+s/^ELSEIF$//g
+s/^elseif$//g
+s/^ENDIF$//g
+s/^endif$//g
+s/^ENDWHILE$//g
+s/^endwhile$//g
+s/^IF$//g
+s/^if$//g
+s/^MOD$//g
+s/^mod$//g
+s/^NOT$//g
+s/^not$//g
+s/^OR$//g
+s/^or$//g
+s/^REPEAT$//g
+s/^repeat$//g
+s/^RETURN$//g
+s/^return$//g
+s/^THEN$//g
+s/^then$//g
+s/^UNTIL$//g
+s/^until$//g
+s/^WHILE$//g
+s/^while$//g
+s/^y$//g
+s/^n$//g
+s/^systemdir$//
+s/^userdir$//
+s/^exec$//
+s/^input$//
+s/^format$//
+s/^exists$//
+s/^shell$//
+s/^substr$//
+s/^length$//
+s/^size$//
+s/^create$//
+s/^write$//
+s/^banner$//
+s/^lookup$//
+' | $awk '{if (NF > 0) print}' > $tok
+  if [ $debug -eq 1 ]; then
+    cp $tok $dbg.2
+  fi
+
+  if [ $listall -eq 0 ]; then
+    # sort calls alphabetically, list every calls once only
+    cat $tok | sort -bdu | sort -bdf > $tok2
+    mv $tok2 $tok
+  else
+    rm -f $tok2
+    touch $tok
+  fi
+  if [ $debug -eq 1 ]; then
+    cp $tok $dbg.3
+  fi
+}
+
+
+#------------------------------------------------------------------------------
+# findmacro() - find a given macro in the path
+#------------------------------------------------------------------------------
+
+findmacro() {
+  fmres=0
+  for d in $mpath; do
+    if [ -f $d/$1 -a $fmres -eq 0 ]; then
+      echo $d/$1
+      fmres=1
+    fi
+  done
+}
+
+
+#------------------------------------------------------------------------------
+# recipe() - report error before exiting
+#------------------------------------------------------------------------------
+
+recipe() {
+  cat << \%
+Usage:  macrocalls <-f> <-r> <-w|-W> <-up> macro <maclibpath <sysmaclibpath>>
+	macrocalls <-a> <-f> <-r> <-w|-W> macro <maclibpath <sysmaclibpath>>
+	macrocalls -h
+	macrocalls -v
+	macrocalls -rev
+
+Arguments:
+  -a 		 list actual call sequence, including repetitive calls
+		    (not allowed with the "-up" and "-r" options)
+  -f             report full macro paths
+  -h             display this text
+  -r             recursive / exhaustive search for sub- or parent macros
+  -rev	         display command version date
+  -up            list macros calling the specified macro
+                    rather than submacro calls
+  -v             same as "-rev"
+  -w             includes conditional calls through wbs/wnt/wexp/werr
+		    (not allowed with the "-r" option)
+  -W 		 list conditional calls through wbs/wnt/wexp/werr ONLY
+  macro          name of macro to scan
+  maclibpath     optional maclibpath
+  sysmaclibpath  optional system maclib path
+
+%
+}
+
+
+#------------------------------------------------------------------------------
+# findparent()
+#------------------------------------------------------------------------------
+#arg1: macro name
+
+findparent() {
+  # "find -exec grep" is EXTREMELY SLOW
+  # find $mpath -type f -exec grep -lw $1 {} /dev/null \; | sort -bdu > $tmp
+
+  # using "grep" directly is much faster, but "grep" on /vnmr/maclib
+  # on /vnmr/maclib may result in "Arguments too long"; we there fore
+  # split every maclib pathn entry into 5 segments
+  rm -f $tmp
+  for d in $mpath; do
+    grep -lw $1 $d/_* /dev/null \; 2> /dev/null | sort -bdu >> $tmp
+    grep -lw $1 $d/[A-L]* /dev/null \; 2> /dev/null | sort -bdu >> $tmp
+    grep -lw $1 $d/[M-Z]* /dev/null \; 2> /dev/null | sort -bdu >> $tmp
+    grep -lw $1 $d/[a-l]* /dev/null \; 2> /dev/null | sort -bdu >> $tmp
+    grep -lw $1 $d/[m-z]* /dev/null \; 2> /dev/null | sort -bdu >> $tmp
+  done
+
+  # the rest is fast
+  num=0
+  if [ -s $tmp ]; then
+    rm -f $tmp2
+    for f in `cat $tmp`; do
+      basename $f >> $tmp2
+    done
+    cat $tmp2 | sort -bdu > $tmp
+    rm -f $tmp2
+    for f in `cat $tmp`; do
+      found=`findmacro $f`
+      if [ x$found != x ]; then
+        echo $found >> $tmp2
+      fi
+    done
+    if [ -s $tmp2 ]; then
+      rm -f $par
+      for f in `cat $tmp2`; do
+        tokenize $f
+        if [ `cat $tok | grep -cw $1` -gt 0 ]; then
+          basename $f >> $par
+          num=`expr $num + 1`
+        fi
+      done
+    else
+      rm -f $par
+      touch $par
+    fi
+  else
+    rm -f $par
+    touch $par
+  fi
+  return $num
+}
+
+
+#------------------------------------------------------------------------------
+# Check option arguments
+#------------------------------------------------------------------------------
+
+echo
+if [ $# -eq 0 ]; then
+  recipe
+  exit
+fi
+while [ `echo x$1 | grep -c '^x-'` -eq 1 ]; do
+  if [ x$1 = "x-a" -o $1 = "x-all" ]; then
+    listall=1
+  elif [ x$1 = "x-d" ]; then
+    debug=1
+  elif [ x$1 = "x-f" ]; then
+    fullpath=1
+  elif [ x$1 = "x-h" -o x$1 = "x-help" ]; then
+    recipe
+    exit
+  elif [ x$1 = "x-r" ]; then
+    recursive=1
+  elif [ x$1 = "x-rev" -o x$1 = "x-v" ]; then
+    echo "\"$cmd\" version $revdate"
+    echo
+    exit
+  elif [ x$1 = "x-up" -o x$1 = "x-u" ]; then
+    up=1
+  elif [ x$1 = "x-w" ]; then
+    if [ $conditional -eq 2 ]; then
+      echo "ERROR: you can only select \"-w\" OR \"-W\""
+      echo
+      recipe
+      echo "aborting."
+      echo
+      exit
+    fi
+    conditional=1
+  elif [ x$1 = "x-W" ]; then
+    if [ $conditional -eq 1 ]; then
+      echo "ERROR: you can only select \"-w\" OR \"-W\""
+      echo
+      recipe
+      echo "aborting."
+      echo
+      exit
+    fi
+    conditional=2
+  else
+    echo "ERROR: invalid option \"$1\""
+    echo
+    recipe
+    echo "aborting."
+    echo
+    exit
+  fi
+  shift
+done
+if [ $conditional -eq 1 -a $recursive -eq 1 ]; then
+  echo "ERROR: \"-w\" option not allowed together with \"-r\""
+  echo
+  recipe
+  echo "aborting."
+  echo
+  exit
+fi
+if [ $listall -eq 1 -a \( $recursive -eq 1 -o $up -eq 1 \) ]; then
+  echo "ERROR: \"-a\" option not allowed together with \"-r\" or \"-up\""
+  echo
+  recipe
+  echo "aborting."
+  echo
+  exit
+fi
+if [ $# -eq 0 ]; then
+  echo "ERROR: must specify a macro name!"
+  echo
+  recipe
+  echo "aborting."
+  echo
+  exit
+fi
+
+
+#------------------------------------------------------------------------------
+# macro name argument
+#------------------------------------------------------------------------------
+
+macro=`basename $1`
+shift
+
+
+#------------------------------------------------------------------------------
+# construct macro path
+#------------------------------------------------------------------------------
+
+mpath=$usermaclib
+if [ $# -gt 0 ]; then
+  if [ $# -gt 2 ]; then
+    recipe
+    exit
+  fi
+  if [ $# -eq 2 ]; then
+    error=0
+    if [ `echo $1 | grep -c '^/'` -ne 1 ]; then
+      echo "ERROR: \"maclibpath\" must be absolute path!"
+      error=`expr $error + 1`
+    fi
+    if [ `echo $2 | grep -c '^/'` -ne 1 ]; then
+      echo "ERROR: \"sysmaclibpath\" must be absolute path!"
+      error=`expr $error + 1`
+    fi
+    if [ $error -gt 0 ]; then
+      echo
+      recipe
+      echo "aborting."
+      echo
+      exit
+    fi
+    mpath="$mpath $1 $2"
+  else
+    if [ `echo $1 | grep -c '^/'` -ne 1 ]; then
+      echo "ERROR: extra path (\"maclibpath\" or \"sysmaclibpath\") must be absolute!"
+      echo
+      recipe
+      echo "aborting."
+      echo
+      exit
+    fi
+    mpath="$mpath $1"
+  fi
+fi
+mpath="$mpath $sysmaclib"
+
+
+###############################################################################
+#                                MAIN SECTION                                 #
+###############################################################################
+
+fm=`findmacro $macro`
+if [ x$fm = x ]; then
+  echo "ERROR: macro \"$macro\" not found!"
+  echo
+  recipe
+  echo "aborting."
+  echo
+  exit
+fi
+rm -f $result
+
+
+#==============================================================================
+# "Upward checks" (list macros calling the specified macro)
+#==============================================================================
+
+if [ $up -eq 1 ]; then
+
+  #----------------------------------------------------------------------------
+  # non-recursive upward checking
+  #----------------------------------------------------------------------------
+  if [ $recursive -eq 0 ]; then
+    findparent $macro
+    nparent=$?
+    if [ $fullpath -eq 1 -a -s $par ]; then
+      if [ $nparent -eq 1 ]; then
+        echo "The following macro calls \"$macro\":"
+      else
+        echo "The following macros call \"$macro\":"
+      fi
+      echo "--------------------------------------------------------------------------"
+      for f in `cat $par`; do
+        findmacro $f >> $result
+      done
+    else
+      if [ -s $par ]; then
+        if [ $nparent -eq 1 ]; then
+          echo "The following macro calls \"$macro\":"
+        else
+          echo "The following macros call \"$macro\":"
+        fi
+        echo "--------------------------------------------------------------------------"
+        cat $par >> $result
+      elif [ $conditional -eq 0 ]; then
+	echo "$cmd: no calls to macro \"$macro\" found - try"
+	echo "        $cmd -up -w $macro"
+        echo "or"
+	echo "        $cmd -up -W $macro"
+	echo "instead, to see conditional calls."
+	echo
+        rm -f $tok $tok2 $par $tmp $tmp2 $rres $add_rres $rres2
+	exit
+      elif [ $conditional -eq 2 ]; then
+	echo "$cmd: no \"conditional\" calls to macro \"$macro\" found - try"
+	echo "        $cmd -up $macro"
+	echo "instead, to look for direct calls."
+	echo
+        rm -f $tok $tok2 $par $tmp $tmp2 $rres $add_rres $rres2
+	exit
+      fi
+    fi
+
+  #----------------------------------------------------------------------------
+  # recursive upward checking
+  #----------------------------------------------------------------------------
+  else
+
+    # this may take a while, so we give feedback with every checking pass
+    pass=1
+    echo "Recursively finding parent macro calls, please wait ... "
+    echo $pass | $awk '{printf("   pass %2d:",$1)}'
+
+    # find parent macros, 1st level (SLOW!)
+    findparent $macro
+    nparent=$?
+
+    # find out which tokens are macros
+    if [ -s $par ]; then
+      mv $par $rres
+    else
+      touch $rres
+    fi
+
+    #--------------------------------------------------------------------------
+    # for every parent macro found we again find parents, add new ones to the
+    # list of parent macros found, put the new ones into a new list for
+    # checking, then recursively repeat this with the new list, until no new
+    # parent macros found
+    #--------------------------------------------------------------------------
+
+    # next round: check all macros found
+    cp $rres $add_rres
+    nfound=`wc -l < $add_rres`
+    echo $nfound | $awk '{printf(" %4d parent macros found\n",$1)}'
+
+    # we stop when either no new macros found or when pass=max
+    while [ -s $add_rres -a $pass -le $uppasses ]; do
+      pass=`expr $pass + 1`
+      rm -f $rres2
+      touch $rres2
+      echo $pass | $awk '{printf("   pass %2d:",$1)}'
+
+      # do this for all parent macros in list
+      for pm in `cat $add_rres`; do
+
+        # find parent macros, next level (SLOW!)
+	pm=`basename $pm`
+        findparent $pm
+        nparent=`expr $nparent + $?`
+
+	# update result lists
+	if [ -s $par ]; then
+	  for pm2 in `cat $par`; do
+	    if [ `grep -cw $pm2 < $rres` -eq 0 ]; then
+              echo $pm2 >> $rres
+              echo $pm2 >> $rres2
+	    fi
+          done
+        fi
+      done
+
+      # build list for next cycle, report number of macros found
+      cat $rres2 | sort -bdu > $add_rres
+      nfound=`wc -l < $add_rres`
+      echo $nfound | $awk '{printf(" %4d parent macros found\n",$1)}'
+    done
+
+    # feedback header
+    if [ $fullpath -eq 1 -a -s $rres ]; then
+      if [ $nparent -eq 1 ]; then
+        echo "The following macro calls \"$macro\":"
+        echo "   (no higher level parent macros found)"
+      else
+        echo "The following macros call \"$macro\":"
+        echo "   (includes higher level parent macros)"
+      fi
+      echo "--------------------------------------------------------------------------"
+      for f in `cat $rres`; do
+        findmacro $f >> $result
+      done
+    else
+      if [ -s $rres ]; then
+        if [ $nparent -eq 1 ]; then
+          echo "The following macro calls \"$macro\":"
+          echo "   (no higher level parent macros found)"
+        else
+          echo "The following macros call \"$macro\":"
+          echo "   (includes higher level parent macros)"
+        fi
+        echo "--------------------------------------------------------------------------"
+        mv $rres $result
+      elif [ $conditional -eq 0 ]; then
+	echo "$cmd: no calls to macro \"$macro\" found - try"
+	echo "        $cmd -up -r -W $macro"
+	echo "instead, to see conditional calls."
+	echo
+        rm -f $tok $tok2 $par $tmp $tmp2 $rres $add_rres $rres2
+	exit
+      elif [ $conditional -eq 2 ]; then
+	echo "$cmd: no conditional ("w") calls to macro \"$macro\" found - try"
+	echo "        $cmd -up $macro"
+	echo "instead, to look for direct calls."
+	echo
+        rm -f $tok $tok2 $par $tmp $tmp2 $rres $add_rres $rres2
+	exit
+      fi
+    fi
+  fi
+
+
+#==============================================================================
+# "Downward checks" (list macro calls in the specified macro)
+#==============================================================================
+
+else
+
+  #----------------------------------------------------------------------------
+  # non-recursive downward checking
+  #----------------------------------------------------------------------------
+  if [ $recursive -eq 0 ]; then
+
+    # extract tokens
+    m=$fm
+    tokenize $m
+
+    # feedback header
+    if [ $conditional -eq 0 ]; then
+      echo "Macros called by the macro \"$m\":"
+    elif [ $conditional -eq 2 ]; then
+      echo "Macros called CONDITIONALLY by the macro \"$m\":"
+    else
+      echo "Macros called (directly or conditionally) by \"$m\":"
+    fi
+    echo "--------------------------------------------------------------------------"
+
+    # now check which tokens are macros
+    if [ $fullpath -eq 0 ]; then
+      for f in `cat $tok`; do
+        found=`findmacro $f`
+        if [ x$found != x ]; then
+          echo $f >> $result
+        fi
+      done
+    else
+      for f in `cat $tok`; do
+        findmacro $f >> $result
+      done
+    fi
+
+  #----------------------------------------------------------------------------
+  # recursive downward checking
+  #----------------------------------------------------------------------------
+  else
+
+    # this may take a while, so we give feedback with every checking pass
+    pass=1
+    echo "Recursively finding macro calls, please wait ... "
+    echo $pass | $awk '{printf("   pass %2d:",$1)}'
+
+    # extract tokens
+    m=$fm
+    tokenize $m
+
+    # find out which tokens are macros
+    rm -f $rres
+    if [ -s $tok ]; then
+      for f in `cat $tok`; do
+        found=`findmacro $f`
+        if [ x$found != x ]; then
+          echo $f >> $rres
+        fi
+      done
+    fi
+    if [ ! -s $rres ]; then
+      touch $rres
+    fi
+
+    #--------------------------------------------------------------------------
+    # for every submacro found we again tokenize, find submacros, add new ones
+    # to the list of submacros found, put the new ones into a new list for
+    # checking, then recursively repeat this with the new list, until no new
+    # submacros found
+    #--------------------------------------------------------------------------
+
+    # next round: check all macros found
+    cp $rres $add_rres
+    nfound=`wc -l < $add_rres`
+    echo $nfound | $awk '{printf(" %4d submacros found\n",$1)}'
+
+    # we stop when either no new macros found or when pass=max
+    while [ -s $add_rres -a $pass -le $downpasses ]; do
+      pass=`expr $pass + 1`
+      rm -f $rres2
+      touch $rres2
+      echo $pass | $awk '{printf("   pass %2d:",$1)}'
+
+      # do this for all submacros in list
+      for sm in `cat $add_rres`; do
+
+	# extract tokens from submacro
+        fsm=`findmacro $sm`
+        tokenize $fsm
+
+	# check which tokens are macros
+	for sm2 in `cat $tok`; do
+          found=`findmacro $sm2`
+          if [ x$found != x ]; then
+	    if [ `grep -cw $sm2 < $rres` -eq 0 ]; then
+              echo $sm2 >> $rres
+              echo $sm2 >> $rres2
+	    fi
+          fi
+        done
+      done
+
+      # build list for next cycle, report number of macros found
+      cat $rres2 | sort -bdu > $add_rres
+      nfound=`wc -l < $add_rres`
+      echo $nfound | $awk '{printf(" %4d submacros found\n",$1)}'
+    done
+
+    # feedback header
+    echo
+    if [ $conditional -eq 0 ]; then
+      echo "Macros called by the macro \"$m\":"
+    else
+      echo "Macros called CONDITIONALLY by the macro \"$m\":"
+    fi
+    if [ `wc -l < $rres` -gt 1 ]; then
+      echo "   (includes calls within submacros)"
+    fi
+    echo "--------------------------------------------------------------------------"
+
+    # build result list
+    if [ $fullpath -eq 0 ]; then
+      mv $rres $result
+    else
+      for f in `cat $rres`; do
+        findmacro $f >> $result
+      done
+    fi
+  fi
+fi
+
+# display results
+if [ -s $result ]; then
+  cat $result
+  echo
+  echo "The result list is stored in $result"
+else
+  echo "(none found)"
+fi
+echo
+
+# cleaning up:
+rm -f $tok $tok2 $par $tmp $tmp2 $rres $add_rres $rres2
+
+# END of "macrocalls"

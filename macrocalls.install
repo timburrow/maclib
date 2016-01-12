@@ -1,0 +1,89 @@
+#!/bin/sh
+
+#-----------------------------------------------------------------
+# Global variables
+#-----------------------------------------------------------------
+if [ x$vnmrsystem = x ]; then
+  vnmrsystem=/vnmr
+fi
+if [ x$vnmruser = x ]; then
+  vnmruser=$HOME/vnmrsystem
+fi
+
+vnmrpath=`(cd $vnmrsystem; pwd)`
+target=`pwd`
+
+sver=""
+if [ -f $vnmrsystem/vnmrrev ]; then
+  sver=`head -n 1 < $vnmrsystem/vnmrrev`
+  if [ `echo $sver | grep -c VERSION` -ne 1 ]; then
+    sver=`grep VERSION < $vnmrsystem/vnmrrev`
+  fi
+fi
+if [ `echo $sver | grep -c VERSION` -ne 1 ]; then
+  if [ -x $vnmrsystem/bin/Vnmrbg ]; then
+    sver=`strings $vnmrsystem/bin/Vnmrbg | grep VERSION`
+  elif [ -x $vnmrsystem/bin/Vnmr ]; then
+    sver=`strings $vnmrsystem/bin/Vnmr | grep VERSION`
+  else
+    sver=""
+  fi
+fi
+if [ `echo $sver | grep -ci "VNMRJ VERSION"` -eq 1 ]; then
+  version=`echo $sver | cut -d ' ' -f3`
+  revision=`echo $sver | cut -d ' ' -f5`
+  vnmr_rev="VnmrJ $version$revision"
+  vnmrj=1
+else
+  version=`echo $sver | cut -d ' ' -f2`
+  revision=`echo $sver | cut -d ' ' -f4`
+  vnmrj=`echo $version | grep -ci vj`
+  if [ $vnmrj -eq 0 ]; then
+    vnmr_rev="VNMR $version$revision"
+  else
+    vnmr_rev="VnmrJ $version$revision"
+  fi
+fi
+
+#-----------------------------------------------------------------
+# Check VNMR Version Compatibility
+#-----------------------------------------------------------------
+if [ $vnmrj -eq 0 ]; then
+  if [ "$version" != "6.1" -o "$revision" = "A" ]; then
+    echo "Contribution \"macrocalls\" is not compatible with $vnmr_rev"
+    echo "   installation aborted."
+    rm -rf macrocalls macrocalls.install macrocalls.README
+    exit 1
+  fi
+fi
+
+#-----------------------------------------------------------------
+# NOW DO THE INSTALLATION
+#-----------------------------------------------------------------
+cd macrocalls
+if [ -f source/stripcomment.c -a -d bin ]; then
+  echo "Recompiling \"stripcomment.c\" ... \c"
+  cc -O -o bin/stripcomment source/stripcomment.c
+  echo " done."
+fi
+if [ -d bin ]; then
+  if [ $target != $vnmrpath ]; then
+    if [ ! -d $HOME/bin ]; then
+      mkdir $HOME/bin
+    fi
+    cd bin
+    tar cf - * | (cd $HOME/bin; tar xvfBp -)
+    cd ..
+    rm -rf bin
+  fi
+fi
+cd maclib
+for f in `ls`; do rm -f $targetdir/maclib/$f; done
+cd ../manual
+for f in `ls`; do rm -f $targetdir/manual/$f; done
+cd ..
+tar cf - * | (cd $target; tar xvfBp -)
+cd $target
+rm -rf macrocalls.install macrocalls
+
+
