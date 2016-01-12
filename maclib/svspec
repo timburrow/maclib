@@ -1,0 +1,19 @@
+"svspec - save spectrum (and fid)"
+"usage: svspec(filename<,'nofid','dos'>)"
+"  where filename is the filename of the data to be saved"
+"        'nofid' suppresses saving the fid in the file"
+"        'dos' (or 'DOS') converts the text and procpar files to dos format"
+"        'nofid' and 'dos' can appear in any order or any combination"
+
+svf($1) "save the fid normally"
+flush   "insure that the data is on the disk"
+copy(curexp+'/datdir/phasefile',$1+'.fid/spectrum')
+$i=2
+while $i<=$# do "check for optional keywords"
+  if (${$i}='nofid') then delete($1+'.fid/fid') endif "delete fid"
+  if (${$i}='dos') or (${$i}='DOS') then "convert text files to DOS format"
+    shell('unix2dos '+$1+'.fid/text '+$1+'.fid/text')
+    shell('unix2dos '+$1+'.fid/procpar '+$1+'.fid/procpar')
+  endif
+  $i=$i+1
+endwhile

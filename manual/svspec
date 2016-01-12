@@ -1,0 +1,21 @@
+************************ VARIAN NMR USER GROUP LIBRARY *************************
+                               NEW MANUAL ENTRY
+
+svspec                 Save spectrum (and fid)
+
+               Syntax: svspec(filename<,'nofid','dos'>)
+
+          Description: Saves a spectrum in the file "filename" in an identical
+                       manner that svf saves a fid (except this version
+                       requires a filename as input). No "rtspec" is provided;
+                       the fundamental purpose of this program is for
+                       transferring spectra to other software for manipulation.
+
+                       Optional keywords (which can be used in any order) are:
+                       'nofid' suppresses saving the fid in the file
+                       'dos' (or 'DOS') converts the text and procpar files to
+                         DOS format
+
+             Examples: svspec('mydata')
+                       svspec('mydata','DOS','nofid')
+
