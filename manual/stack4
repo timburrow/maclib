@@ -1,0 +1,16 @@
+************************ VARIAN NMR USER GROUP LIBRARY ************************
+
+stack4    displays 3d planes, 4 at a time on the screen, with labels
+
+ Syntax: stack4(startingplane#,endingplane#,<'pos' or 'neg'>,<levels>,<spacing>
+
+ Description: This macro will produce a series of displays showing 4 planes
+              at a time. The axes are correct and a line above each 2D plane
+              indicates the plane # in the other dimension, the nucleus for
+              that dimension and its chemical shift. This macro is based on 
+              the dsplanes macro. 
+
+              Plotting of similar sized plots is done 6 at a time using the`
+              macro "plot6"
+
+ Examples:    stack4(1,64,'pos',12,1.3)
