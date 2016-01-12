@@ -1,0 +1,10 @@
+"setdof - a simple macro to set the CH2 13C offsets                "
+"see the macro hmqcf1 for f1 window setting as well                "
+"you should determine the offset for "zero ppm"  and decfrq in your machine    "
+"and assign these to $dofzero and $decfrq in this macro: these are for our 500 "
+
+
+$dofzero = -11851.8  "zero position for dof in 13C enter for your NMR"
+$decfrq = 125.705 "decoupler field  for 13C"
+$pos = ($1 * $decfrq) + $dofzero
+dof = $pos

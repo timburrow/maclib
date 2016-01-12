@@ -1,0 +1,12 @@
+*********************** VARIAN NMR USER GROUP LIBRARY ***********************
+                              NEW MANUAL ENTRY
+
+setdof		Set decoupler offset
+
+Syntax:		setdof(ppm)
+
+Description:	Sets the decoupler frequency for indirect experiments to
+		a specified position in ppm. The macro must be edited to
+		correspond to a particular spectrometer.
+
+Examples:	setdof(75)
