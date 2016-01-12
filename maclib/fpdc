@@ -1,0 +1,39 @@
+"fpdc - Find Peaks (fp) command with drift correction"
+"                             S.L.Patt, 25 March 1993"
+
+$npks=size('llfrq') "Expects previous dll or nll (like fp)"
+$output=curexp+'/fp.out'
+write('reset',$output)
+write('file',$output,'List of %d lines in spectrum 1 to spectrum %d',$npks,arraydim)
+write('file',$output,'line         frequency (Hz)')
+$i=1
+repeat
+  write('file',$output,'%4d%18.2f',$i,llfrq[$i]-rfl+rfp)
+  $i=$i+1
+until $i>$npks
+exists('npoint','parameter'):$e
+if $e then
+  $npoint=npoint
+  $delta=$npoint*sw/(fn/2-1)
+  " should really divide by sw/2; sw/2-1 is in accordance with bug vnmr.5101 "
+  if $delta<0 then $delta=0-$delta endif
+else
+  $npoint=2
+  $delta=$npoint*sw/(fn/2-1)
+  " should really divide by sw/2; sw/2-1 is in accordance with bug vnmr.5101 "
+endif
+write('file',$output,'line    spectrum    amplitude (mm)')
+$i=1
+mark('reset')
+repeat
+  $j=1
+  repeat
+    select($j) dc
+    $frq=llfrq[$i]-rfl+rfp
+    peak($frq-$delta,$frq+$delta):$amp
+    write('file',$output,'%4d%12d%13.2f',$i,$j,$amp)
+    $j=$j+1
+  until $j>arraydim
+  $i=$i+1
+until $i>$npks
+mark('reset')

@@ -1,0 +1,26 @@
+*********************** VARIAN NMR USER GROUP LIBRARY ***********************
+                              NEW MANUAL ENTRY
+
+fpdc		Find peaks (for T1 analysis) with drift correction
+
+Syntax:		fpdc
+
+Description:	Finds the peaks in a series of spectra in preparation for a
+		T1 (or T2 or other) analysis, outputting the data into the
+		file fp.out in the current experiment. Like fp, this command
+		should be preceded by setting the threshhold and displaying
+		the peaks (using dll or nll) in a single spectrum of the
+		array.
+
+		Unlike fp, this macro does NOT currently support arguments
+		for selecting which lines, i.e., it finds peaks for all lines.
+
+		Like fp, it uses the parameter npoint as a search limit
+		(default: 2) in order to accomodate peaks which move slightly
+		from spectrum to spectrum. To disable the "npoint search range"
+		use
+			create('npoint','integer')
+			setgroup('npoint','display')
+			npoint=0
+
+		Typical usage: Set th, followed by: nll fpdc t1
