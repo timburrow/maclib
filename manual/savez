@@ -1,0 +1,16 @@
+*********************** VARIAN NMR USER GROUP LIBRARY ***********************
+                              NEW MANUAL ENTRY
+
+savez		Save a FID to a disk file with name incrementation
+
+Syntax:		savez(filename)
+
+Description:	Saves a FID to a named file, checking first for the existence
+		of the file and, if it exists, incrementing the filename. The
+		intention is to allow saving a series of FIDs at each block
+		size for whatever purposes this might be useful for. The
+		command can also be used simply to save a FID at the very
+		end of the experiment using wexp.
+
+Examples:	n1='/home/vnmr1/myfid' wbs='savez(n1)'
+		n1='/home/vnmr1/data/C13_menthol' wexp='savez(n1)'

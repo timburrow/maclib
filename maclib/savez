@@ -1,0 +1,15 @@
+"savez - a macro to allow fid saving with each completion of bs   "
+"example of usage : set n1='filename', wbs='savez(n1)' , au       "
+
+exists($1+'.fid','file'):$e
+if ($e>0) then
+   $count=0   
+   $countstr=''     "necessary!"
+   repeat
+      $count = $count + 1
+      format($count,0,0):$countstr
+      exists($1+'_'+$countstr+'.fid','file'):$e
+   until $e=0 "until file doesn't exist"
+   $1=$1+'_'+$countstr
+endif     
+svf($1)
