@@ -1,0 +1,49 @@
+
+*******************************************************************************
+ acq3dpl - Acquire 3D spectra as a series of f1f3 planes (M)
+*******************************************************************************
+
+      Syntax: acq3dpl<(altexp<,filename>)>
+
+ Description: "acq3dpl" is a macro that allows acquiring 3D spectra as a
+	      series of f1f3 planes. While this prevents the VNMR command
+	      "ft3d" from being used (processing with external software
+	      packages required) it offers the advantage of giving faster
+	      access to a complete f1f3 plane.
+	      The acquisition is performed by alternating between two
+	      experiments: this permits continuous acquisition with minimal
+	      inter-plane delays. For TPPI data ("phase2=3") the odd plane
+	      numbers will be acquired in the starting experiment, the even
+	      planes in the alternate experiment. For States ("phase2=1,2")
+	      experiments the starting experiment will be used to acquire the
+	      planes with "phase2=1", the alternate experiment for the planes
+	      with "phase2=2". The alternate experiment can either be
+	      specified as first argument (numeric), or it can be entered
+	      interactively. The data will be stored in a directory under the
+	      names
+			plane001.fid
+			plane002.fid
+			...
+	      The name of the directory for storing these planes can be given
+	      as second argument, or again be entered interactively. If an
+	      absolute pathname (starting with "/") is given, that directory
+	      is created. If a simple, relative pathname is given, that
+              directory is creates as subfile of "userdir+'/fidlib'"; if a
+	      multi-level filename is given, all directories (except for the
+              lowest-level one) must already exist.
+	      The initial two planes (one in each experiment) are submitted
+	      by the "acq3dpl" macro; subsequent planes are queued by a macro
+	      "continue3d". During the experiment there will always be one
+	      active experiment (acquiring) and one experiment in the queue,
+	      such that both experiments will appear busy to the user.
+
+   Arguments: "altexp" (optional) is the number of the alternate experiment.
+	      "filename" (optional) is a directory name for storing the
+		planes; the directory will be created if it doesn't exist. If
+		a relative pathname is given, it is assumed to be a subfile of
+		a directory "fidlib" in the user's "~/vnmrsys" ("userdir").
+
+    Examples: acq3dpl
+	      acq3dpl(7)
+	      acq3dpl(3,'lysozyme.hncoca')
+	      acq3dpl(9000,'/data/vnmr1/lysozyme/hncoca')

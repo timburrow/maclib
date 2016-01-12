@@ -1,0 +1,129 @@
+" acq3dpl - acquire 3d spectra in multiplane-mode "
+
+" +-------------------------------------------+ "
+" | variable containing default directory for | "
+" | user's data storage - change if necessary | "
+" +-------------------------------------------+ "
+$fiddir=userdir+'/fidlib'
+
+" +-------------------------------------------------------+ "
+" | check for arg1 / alternate experiment for acquisition | "
+" +-------------------------------------------------------+ "
+exists('name','parameter'):$e
+if not($e) then
+  create('name','string')
+endif
+$curexpname=''
+$altexpname=''
+jexp:$curexp,$curexpname
+if $#=0 then
+  if $curexp=9999 then
+    $altexp=9998
+  else
+    if $curexp=4 then
+      $altexp=6
+    else
+      $altexp=$curexp+1
+    endif
+  endif
+  format($altexp,1,0):$altexpname
+  $altexpname='exp'+$altexpname
+  $in=''
+  input('OK to use '+$altexpname+' as alternate experiment (y|n)? [y] '):$in
+  if $in='n' then
+    repeat
+      input('Enter number of alternate experiment: '):$altexp
+      format($altexp,1,0):$altexpname
+      $altexpname='exp'+$altexpname
+    until ($altexp<>$curexp)and($altexp>0)and($altexp<10000)
+  endif
+else
+  $altexp=$1
+  format($altexp,1,0):$altexpname 
+  $altexpname='exp'+$altexpname
+  while ($altexp=$curexp)or($altexp<1)or($altexp>9999) do
+    input('Invalid experiment number; enter number of alternate experiment: '):$altexp 
+    format($altexp,1,0):$altexpname 
+    $altexpname='exp'+$altexpname
+  endwhile
+endif
+
+" +-------------------------------------------+ "
+" | create alternate experiment, if necessary | "
+" +-------------------------------------------+ "
+exists(userdir+'/'+$altexpname,'directory'):$e
+if not($e) then
+  cexp($altexp)
+endif
+
+" +-----------------------------------------------+ "
+" | check arg2 / file name for storing plane data | "
+" +-----------------------------------------------+ "
+if $#<2 then
+  if name='' then
+    input('Enter name for 3D storage: '):name
+  else
+    input('OK to store data as '+$fiddir+'/'+name+' (y|n)? [y] '):$reply
+    if $reply='n' then
+      input('Enter name for 3D storage: '):name
+    endif
+  endif
+else
+  name=$2
+endif
+$ch1=''
+substr(name,1,1):$ch1
+if $ch1<>'/' then 
+  exists($fiddir,'directory'):$e
+  if not($e) then
+    mkdir($fiddir)
+  endif
+  $dir=$fiddir+'/'+name         " directory for data from this 3D experiment "
+else 
+  $dir=name 			" absolute path name was given "
+endif  
+exists($dir,'directory'):$e 
+if not($e) then  
+  mkdir($dir) 
+endif
+exists($dir,'directory'):$e
+if not($e) then
+  write('error','%s: could not create directory %s',$0,$dir)
+  return
+endif
+
+" +---------------------+ "
+" | check 3D parameters | "
+" +---------------------+ "
+exists('ni2','parameter'):$eni2
+exists('sw2','parameter'):$esw2
+exists('d3','parameter'):$ed3
+if ($eni2=0)or($esw2=0)or($ed3=0) then
+  write('error','%s: not a proper 3D experiment!',$0)
+  exit
+endif
+
+" +-----------------------------------+ "
+" | start the experiment (odd planes) | "
+" +-----------------------------------+ "
+$sizeph2=size('phase2')
+r1=ni2*$sizeph2			" r1 = total number of planes "
+ni2=1				" will not automatically increment d3 "
+$phase2=phase2
+phase2=$phase2[1]		" phase parameter for odd planes "
+r5=1				" r5 = plane counter "
+wexp='continue3d'		" will submit other planes in this series "
+au
+
+" +------------------------------------+ "
+" | start the experiment (even planes) | "
+" +------------------------------------+ "
+mp($altexp)
+jexp($altexp)
+r5=2
+if $sizeph2=1 then
+  d3=d3+1/sw2
+else
+  phase2=$phase2[2]
+endif
+au

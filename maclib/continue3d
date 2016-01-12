@@ -1,0 +1,35 @@
+" continue3d - submit next 3D plane for acquisition "
+
+" +-------------------------------------------+ "
+" | variable containing default directory for | "
+" | user's data storage - change if necessary | "
+" +-------------------------------------------+ "
+$fiddir=userdir+'/fidlib'
+
+" +---------------------------------------------------+ "
+" | create storage filename and store completed plane | "
+" +---------------------------------------------------+ "
+$ch1=''
+substr(name,1,1):$ch1
+if $ch1<>'/' then
+  $dir=$fiddir+'/'+name		" directory for data from this 3D experiment "
+else
+  $dir=name
+endif
+$ixname=''
+format(r5,'03',0):$ixname
+$savename=$dir+'/plane.'+$ixname
+svf($savename)
+
+" +---------------------------------+ "
+" | queue next plane in this series | "
+" +---------------------------------+ "
+if r5<r1-1 then
+  if phase2=3 then		" TPPI - skip one d3 increment "
+    d3=d3+2/sw2
+  else
+    d3=d3+1/sw2			" States - simple d3 increment "
+  endif
+  r5=r5+2			" increment plane counter "
+  au
+endif

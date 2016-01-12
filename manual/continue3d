@@ -1,0 +1,9 @@
+
+*******************************************************************************
+ continue3d - Submit next f1f3 plane in 3D plane acquisition (M)
+*******************************************************************************
+
+ Description: "continue3d" is a macro that is called indirectly (via "wexp")
+              by the "acq3dpl" macro, see "man('acq3dpl')".
+
+    See also: acq3dpl - Acquire 3D spectra as a series of f1f3 planes (M)
